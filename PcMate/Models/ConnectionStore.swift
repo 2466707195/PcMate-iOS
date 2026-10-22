@@ -66,6 +66,7 @@ final class ConnectionStore: ObservableObject {
     @Published private(set) var connections: [Connection] = []
 
     private let defaultsKey = "pcmate.connections.v1"
+    private let refreshMigrationKey = "pcmate.refresh.oneSecond.v1"
     private let keychain = KeychainStore.shared
 
     init() {
@@ -78,8 +79,26 @@ final class ConnectionStore: ObservableObject {
             connections = []
             return
         }
-        connections = decoded.map { hydrate($0) }
+        var loaded = decoded.map { hydrate($0) }
             .sorted { $0.lastUsedAt > $1.lastUsedAt }
+
+        // 旧版本默认刷新间隔是 2 秒；升级后把仍为旧默认值的连接迁移到 1 秒，
+        // 用户手动设置过的其他间隔保持不变。
+        if !UserDefaults.standard.bool(forKey: refreshMigrationKey) {
+            loaded = loaded.map { connection in
+                var copy = connection
+                if copy.refreshSeconds == 2 {
+                    copy.refreshSeconds = 1
+                }
+                return copy
+            }
+            UserDefaults.standard.set(true, forKey: refreshMigrationKey)
+            connections = loaded
+            persist()
+            return
+        }
+
+        connections = loaded
     }
 
     func save(_ connection: Connection) {

@@ -111,7 +111,9 @@ final class DashboardModel: ObservableObject {
 
     private func startPolling() {
         pollTask?.cancel()
-        let seconds = max(1, min(10, connection.refreshSeconds))
+        // Agent 每 500ms 推送一次，界面固定每秒读取最新快照；SSH 模式按配置的间隔采样。
+        let configured = max(1, min(10, connection.refreshSeconds))
+        let seconds = session.activeTransport == .agent ? 1 : configured
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)

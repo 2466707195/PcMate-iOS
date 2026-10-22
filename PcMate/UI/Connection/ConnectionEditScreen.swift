@@ -402,24 +402,24 @@ struct ConnectionEditScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 AuroraSectionHeader(
                     title: "刷新",
-                    subtitle: "SSH 模式的采样间隔",
+                    subtitle: "Agent 实时读取 · SSH 采样间隔",
                     systemIcon: "arrow.clockwise"
                 )
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 7) {
-                        fieldLabel("仪表盘刷新间隔（秒）")
+                        fieldLabel("SSH 采样间隔（秒）")
                         AuroraTextField(
-                            placeholder: "2",
+                            placeholder: "1",
                             text: Binding(
                                 get: { String(draft.refreshSeconds) },
-                                set: { draft.refreshSeconds = max(1, min(30, Int($0) ?? 2)) }
+                                set: { draft.refreshSeconds = max(1, min(10, Int($0) ?? 1)) }
                             ),
                             systemIcon: "arrow.clockwise",
                             keyboardType: .numberPad
                         )
                     }
                 }
-                Text("Agent 会主动推送快照；SSH 模式按这个间隔执行采样命令。")
+                Text("Agent 固定每秒读取一次推送（推送间隔 500ms）；SSH 模式按这个间隔采样。")
                     .font(AuroraFont.labelSmall)
                     .foregroundStyle(Aurora.muted)
             }

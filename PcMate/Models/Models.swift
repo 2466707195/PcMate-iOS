@@ -65,7 +65,7 @@ struct Connection: Codable, Identifiable, Hashable {
     var privateKey: String = ""
     var passphrase: String = ""
     var sudoPassword: String = ""
-    var refreshSeconds: Int = 2
+    var refreshSeconds: Int = 1
     var transport: Transport = .agent
     var agentPort: Int = 8765
     var agentToken: String = ""
