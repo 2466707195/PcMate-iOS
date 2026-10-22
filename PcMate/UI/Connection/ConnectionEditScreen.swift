@@ -31,7 +31,7 @@ struct ConnectionEditScreen: View {
                     TextLinkButton(text: "保存") { save() }
                 }
             } content: {
-                AuroraScrollView(bottomInset: 128) {
+                AuroraScrollView(bottomInset: 168) {
                     basicSection
                     transportSection
 
@@ -45,6 +45,19 @@ struct ConnectionEditScreen: View {
                 }
             } bar: {
                 GlassBar {
+                    HStack(spacing: 7) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Aurora.success)
+                        Text("密码与令牌保存在 Keychain")
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                        Spacer(minLength: 0)
+                        if isEditing {
+                            StatusPill(text: "编辑中", color: Aurora.brand)
+                        }
+                    }
+                    Spacer().frame(height: 10)
                     HStack(spacing: 10) {
                         if isEditing {
                             DangerTonalButton(text: "删除", systemIcon: "trash") {
@@ -101,6 +114,11 @@ struct ConnectionEditScreen: View {
     private var basicSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 13) {
+                AuroraSectionHeader(
+                    title: "基本信息",
+                    subtitle: "给这台电脑起个名字",
+                    systemIcon: "desktopcomputer"
+                )
                 fieldLabel("名称")
                 AuroraTextField(
                     placeholder: "例如：书房电脑",
@@ -126,12 +144,15 @@ struct ConnectionEditScreen: View {
     private var transportSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text("连接方式")
-                    .font(AuroraFont.titleMedium)
-                    .foregroundStyle(Aurora.ink)
+                AuroraSectionHeader(
+                    title: "连接方式",
+                    subtitle: "Agent 优先，SSH 作为回退",
+                    systemIcon: "bolt.horizontal.fill"
+                )
 
                 HStack(spacing: 8) {
                     ForEach(Transport.allCases) { transport in
+                        let selected = draft.transport == transport
                         Button {
                             draft.transport = transport
                         } label: {
@@ -141,21 +162,25 @@ struct ConnectionEditScreen: View {
                                         .font(.system(size: 13, weight: .semibold))
                                     Text(transport.label)
                                         .font(AuroraFont.labelLarge)
+                                    if selected {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 12, weight: .semibold))
+                                    }
                                 }
                                 Text(transport == .agent ? "实时推送，推荐" : "通用回退")
                                     .font(AuroraFont.labelSmall)
-                                    .opacity(0.75)
+                                    .foregroundStyle(selected ? Aurora.onBrandContainer : Aurora.muted)
                             }
-                            .foregroundStyle(draft.transport == transport ? Aurora.onBrandContainer : Aurora.inkSoft)
+                            .foregroundStyle(selected ? Aurora.onBrandContainer : Aurora.inkSoft)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 9)
                             .background(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(draft.transport == transport ? Aurora.brandContainer : Aurora.surfaceVariant)
+                                    .fill(selected ? Aurora.brandContainer : Color.white)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(draft.transport == transport ? Aurora.brand.opacity(0.35) : Color.clear, lineWidth: 1)
+                                    .stroke(selected ? Aurora.brand : Aurora.line, lineWidth: 1)
                             )
                         }
                         .buttonStyle(.plain)
@@ -170,15 +195,11 @@ struct ConnectionEditScreen: View {
     private var agentSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 13) {
-                HStack {
-                    Text("Agent")
-                        .font(AuroraFont.titleMedium)
-                        .foregroundStyle(Aurora.ink)
-                    Spacer()
-                    Text("WebSocket + HTTPS")
-                        .font(AuroraFont.labelSmall)
-                        .foregroundStyle(Aurora.brand)
-                }
+                AuroraSectionHeader(
+                    title: "Agent",
+                    subtitle: "WebSocket + HTTPS",
+                    systemIcon: "bolt.horizontal.fill"
+                )
 
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 7) {
@@ -228,16 +249,11 @@ struct ConnectionEditScreen: View {
                 )
 
                 if draft.agentToken.isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .foregroundStyle(Aurora.warning)
-                        Text("还没有令牌，请用 6 位配对码连接一次。")
-                            .font(AuroraFont.labelSmall)
-                            .foregroundStyle(Aurora.warning)
-                    }
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Aurora.warningContainer))
+                    AuroraBanner(
+                        systemIcon: "exclamationmark.circle.fill",
+                        text: "还没有令牌，请用 6 位配对码连接一次。",
+                        tone: Aurora.warning
+                    )
                 }
 
                 TonalButton(text: "用 6 位配对码连接", systemIcon: "number.square.fill") {
@@ -253,15 +269,12 @@ struct ConnectionEditScreen: View {
     private var sshSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 13) {
-                HStack {
-                    Text(draft.transport == .agent ? "SSH 回退（可选）" : "SSH")
-                        .font(AuroraFont.titleMedium)
-                        .foregroundStyle(Aurora.ink)
-                    Spacer()
-                    Text("SFTP")
-                        .font(AuroraFont.labelSmall)
-                        .foregroundStyle(Aurora.teal)
-                }
+                AuroraSectionHeader(
+                    title: draft.transport == .agent ? "SSH 回退（可选）" : "SSH",
+                    subtitle: "SFTP 文件与命令采集",
+                    systemIcon: "terminal.fill",
+                    tone: Aurora.teal
+                )
 
                 if draft.transport == .agent {
                     Toggle(isOn: $draft.allowSshFallback) {
@@ -302,18 +315,29 @@ struct ConnectionEditScreen: View {
 
                 HStack(spacing: 8) {
                     ForEach(AuthType.allCases) { type in
+                        let selected = draft.authType == type
                         Button {
                             draft.authType = type
                         } label: {
-                            Text(type.label)
-                                .font(AuroraFont.labelLarge)
-                                .foregroundStyle(draft.authType == type ? Aurora.onTealContainer : Aurora.inkSoft)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 36)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(draft.authType == type ? Aurora.tealContainer : Aurora.surfaceVariant)
-                                )
+                            HStack(spacing: 5) {
+                                if selected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                                Text(type.label)
+                                    .font(AuroraFont.labelLarge)
+                            }
+                            .foregroundStyle(selected ? Aurora.onTealContainer : Aurora.inkSoft)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(selected ? Aurora.tealContainer : Aurora.surfaceVariant)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(selected ? Aurora.teal : Color.clear, lineWidth: 1)
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -335,7 +359,7 @@ struct ConnectionEditScreen: View {
                         .scrollContentBackground(.hidden)
                         .frame(minHeight: 112)
                         .padding(8)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Aurora.surfaceVariant))
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(Aurora.line, lineWidth: 1)
@@ -376,9 +400,11 @@ struct ConnectionEditScreen: View {
     private var settingsSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text("刷新")
-                    .font(AuroraFont.titleMedium)
-                    .foregroundStyle(Aurora.ink)
+                AuroraSectionHeader(
+                    title: "刷新",
+                    subtitle: "SSH 模式的采样间隔",
+                    systemIcon: "arrow.clockwise"
+                )
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 7) {
                         fieldLabel("仪表盘刷新间隔（秒）")
@@ -403,13 +429,12 @@ struct ConnectionEditScreen: View {
     private var securitySection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 9) {
-                HStack(spacing: 7) {
-                    Image(systemName: "lock.shield.fill")
-                        .foregroundStyle(Aurora.success)
-                    Text("安全")
-                        .font(AuroraFont.titleMedium)
-                        .foregroundStyle(Aurora.ink)
-                }
+                AuroraSectionHeader(
+                    title: "安全",
+                    subtitle: "凭据只保存在本机",
+                    systemIcon: "lock.shield.fill",
+                    tone: Aurora.success
+                )
                 Text("密码、私钥和 Agent 令牌只保存在 iOS Keychain；UserDefaults 只存连接元数据。TLS 证书和 SSH 主机密钥都按首次信任的 SHA-256 指纹固定。")
                     .font(AuroraFont.bodySmall)
                     .foregroundStyle(Aurora.inkSoft)

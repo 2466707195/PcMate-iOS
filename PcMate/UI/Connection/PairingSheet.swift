@@ -26,7 +26,7 @@ struct PairingSheet: View {
                     EmptyView()
                 }
             } content: {
-                AuroraScrollView(bottomInset: 128) {
+                AuroraScrollView(bottomInset: 168) {
                     if let result {
                         successCard(result)
                     } else {
@@ -35,6 +35,17 @@ struct PairingSheet: View {
                 }
             } bar: {
                 GlassBar {
+                    HStack(spacing: 8) {
+                        Text(result == nil ? "配对码 5 分钟内有效" : "访问令牌已安全保存")
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                        Spacer(minLength: 0)
+                        StatusPill(
+                            text: result == nil ? "TLS" : "已配对",
+                            color: result == nil ? Aurora.brand : Aurora.success
+                        )
+                    }
+                    Spacer().frame(height: 10)
                     if let result {
                         PrimaryButton(text: "完成", systemIcon: "checkmark") {
                             onPaired(result)
@@ -87,11 +98,11 @@ struct PairingSheet: View {
                     .frame(maxWidth: .infinity)
                     .background(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Aurora.surfaceVariant)
+                            .fill(code.count == 6 ? Aurora.brandContainer : Color.white)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(code.count == 6 ? Aurora.brand.opacity(0.45) : Aurora.line, lineWidth: 1)
+                            .stroke(code.count == 6 ? Aurora.brand : Aurora.line, lineWidth: 1)
                     )
                     .onChange(of: code) { newValue in
                         let filtered = String(newValue.filter { $0.isNumber }.prefix(6))
@@ -99,18 +110,11 @@ struct PairingSheet: View {
                     }
 
                 if let errorMessage {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Aurora.rose)
-                            .padding(.top, 1)
-                        Text(errorMessage)
-                            .font(AuroraFont.bodySmall)
-                            .foregroundStyle(Aurora.rose)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Aurora.roseContainer))
+                    AuroraBanner(
+                        systemIcon: "exclamationmark.triangle.fill",
+                        text: errorMessage,
+                        tone: Aurora.rose
+                    )
                 }
 
                 Text("配对码由电脑端生成，5 分钟内有效。配对成功后，iOS 会保存访问令牌和服务器证书指纹。")
@@ -152,6 +156,8 @@ struct PairingSheet: View {
                             .font(AuroraFont.bodySmall)
                             .foregroundStyle(Aurora.inkSoft)
                     }
+                    Spacer(minLength: 4)
+                    StatusPill(text: "已配对", color: Aurora.success)
                 }
 
                 if let info = result.hostInfo {

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-// === Aurora UI 通用组件（Hyperdown iOS）===
+// === Aurora UI 通用组件（iOS / SwiftUI）===
 // 对应 Android 版 `ui/common/Common.kt`。
 
 // MARK: - 极光背景
@@ -164,6 +164,115 @@ struct SectionCard<Content: View>: View {
             .overlay(
                 AuroraShape.card.stroke(Aurora.line.opacity(0.55), lineWidth: 1)
             )
+    }
+}
+
+// MARK: - 卡片标题
+
+/// 卡片内统一样式的小标题：可选图标、说明和右侧计数。
+///
+/// 页面里不要再用裸的 `HStack + Text` 拼标题，保证字号、颜色和间距一致。
+struct AuroraSectionHeader: View {
+
+    let title: String
+    var subtitle: String? = nil
+    var systemIcon: String? = nil
+    var tone: Color = Aurora.brand
+    var trailingText: String? = nil
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            if let systemIcon {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(tone.tint(0.13))
+                    .frame(width: 34, height: 34)
+                    .overlay(
+                        Image(systemName: systemIcon)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(tone)
+                    )
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(AuroraFont.titleMedium)
+                    .foregroundStyle(Aurora.ink)
+                    .lineLimit(1)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(AuroraFont.labelSmall)
+                        .foregroundStyle(Aurora.muted)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            if let trailingText {
+                Text(trailingText)
+                    .font(AuroraFont.labelSmall)
+                    .foregroundStyle(Aurora.muted)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+// MARK: - 提示条
+
+/// 统一的提示条：实色淡底 + 语义色文字。
+///
+/// 不再在页面里写 `background.opacity(...)`，低明度底会透出卡片阴影。
+struct AuroraBanner: View {
+
+    let systemIcon: String
+    let text: String
+    var tone: Color = Aurora.warning
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: systemIcon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tone)
+                .padding(.top, 1)
+            Text(text)
+                .font(AuroraFont.bodySmall)
+                .foregroundStyle(tone)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(tone.tint(0.13))
+        )
+    }
+}
+
+// MARK: - 顶栏图标按钮
+
+/// 顶栏标准图标按钮：40pt 圆形浅色底，可关闭时自动降透明度。
+struct AuroraIconButton: View {
+
+    let systemIcon: String
+    var tone: Color = Aurora.brand
+    var size: CGFloat = 40
+    var enabled: Bool = true
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemIcon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tone)
+                .frame(width: size, height: size)
+                .background(Circle().fill(tone.tint(0.13)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressScaleStyle())
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.45)
     }
 }
 

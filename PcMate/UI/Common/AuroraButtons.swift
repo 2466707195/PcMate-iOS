@@ -1,6 +1,6 @@
 import SwiftUI
 
-// === Aurora UI 按钮（Hyperdown iOS）===
+// === Aurora UI 按钮（iOS / SwiftUI）===
 // 硬规则：按钮文字必须居中 —— 统一用 Button + 居中的 label，
 // 不要自己拼 HStack 挤文案。
 
@@ -88,7 +88,7 @@ struct TonalButton: View {
     }
 }
 
-/// 主 CTA：品牌渐变底、白字。禁用时换成浅色底 + 灰字。
+/// 主 CTA：品牌渐变底、白字。禁用时渐变换成 muted 实色。
 ///
 /// 一个页面最多一个。
 struct GradientButton: View {
@@ -106,16 +106,17 @@ struct GradientButton: View {
                 systemIcon: systemIcon,
                 expands: expands
             )
-            .foregroundStyle(enabled ? Color.white : Aurora.muted)
-            // 必须带 in: AuroraShape.button —— 只填颜色会变成直角矩形，
-            // 放在实白底栏里就是一块突兀的灰方块。
+            .foregroundStyle(Color.white)
             .background(
-                enabled ? AnyShapeStyle(Aurora.brandGradient) : AnyShapeStyle(Aurora.surfaceVariant),
+                enabled
+                    ? AnyShapeStyle(Aurora.brandGradient)
+                    : AnyShapeStyle(Aurora.muted),
                 in: AuroraShape.button
             )
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.6)
     }
 }
 

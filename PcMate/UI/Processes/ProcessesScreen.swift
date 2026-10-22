@@ -117,34 +117,24 @@ struct ProcessesScreen: View {
                     subtitle: "\(model.totalCount) 个进程 · \(model.session.transportLabel)",
                     onBack: { dismiss() }
                 ) {
-                    Button {
+                    AuroraIconButton(
+                        systemIcon: "arrow.clockwise",
+                        tone: Aurora.brand,
+                        enabled: !model.loading
+                    ) {
                         Task { await model.load() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Aurora.brand)
-                            .frame(width: 38, height: 38)
-                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .disabled(model.loading)
                 }
             } content: {
-                AuroraScrollView(bottomInset: 120) {
+                AuroraScrollView(bottomInset: 172) {
                     searchAndFilter
 
                     if let error = model.errorMessage {
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(Aurora.rose)
-                            Text(error)
-                                .font(AuroraFont.bodySmall)
-                                .foregroundStyle(Aurora.rose)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(11)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(Aurora.roseContainer))
+                        AuroraBanner(
+                            systemIcon: "exclamationmark.triangle.fill",
+                            text: error,
+                            tone: Aurora.rose
+                        )
                     }
 
                     if model.loading && model.items.isEmpty {
@@ -177,6 +167,14 @@ struct ProcessesScreen: View {
                 }
             } bar: {
                 GlassBar {
+                    HStack(spacing: 8) {
+                        Text("共 \(model.totalCount) 个进程")
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                        Spacer(minLength: 0)
+                        StatusPill(text: "按 CPU 排序", color: Aurora.brand)
+                    }
+                    Spacer().frame(height: 10)
                     HStack(spacing: 8) {
                         SmallTonalButton(text: "刷新", systemIcon: "arrow.clockwise", expands: true) {
                             Task { await model.load() }
@@ -235,29 +233,48 @@ struct ProcessesScreen: View {
     }
 
     private var searchAndFilter: some View {
-        VStack(spacing: 10) {
-            AuroraTextField(
-                placeholder: "搜索进程名、PID、用户",
-                text: $model.search,
-                systemIcon: "magnifyingglass"
-            )
+        SectionCard {
+            VStack(alignment: .leading, spacing: 10) {
+                AuroraSectionHeader(
+                    title: "查找进程",
+                    subtitle: "按名称、PID 或用户搜索",
+                    systemIcon: "magnifyingglass"
+                )
 
-            HStack(spacing: 8) {
-                ForEach(ProcessFilter.allCases) { filter in
-                    Button {
-                        model.filter = filter
-                    } label: {
-                        Text(filter.rawValue)
-                            .font(AuroraFont.labelLarge)
-                            .foregroundStyle(model.filter == filter ? Aurora.onBrandContainer : Aurora.inkSoft)
+                AuroraTextField(
+                    placeholder: "搜索进程名、PID、用户",
+                    text: $model.search,
+                    systemIcon: "magnifyingglass"
+                )
+
+                HStack(spacing: 8) {
+                    ForEach(ProcessFilter.allCases) { filter in
+                        let selected = model.filter == filter
+                        Button {
+                            model.filter = filter
+                        } label: {
+                            HStack(spacing: 5) {
+                                if selected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                                Text(filter.rawValue)
+                                    .font(AuroraFont.labelLarge)
+                            }
+                            .foregroundStyle(selected ? Aurora.onBrandContainer : Aurora.inkSoft)
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
                             .background(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(model.filter == filter ? Aurora.brandContainer : Aurora.surfaceVariant)
+                                    .fill(selected ? Aurora.brandContainer : Aurora.surfaceVariant)
                             )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(selected ? Aurora.brand : Color.clear, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }

@@ -33,6 +33,7 @@ struct AuroraTextField: View {
                 }
                 field
             }
+            .focused($isFocused)
 
             if let trailingSystemIcon {
                 Button {
@@ -63,7 +64,6 @@ struct AuroraTextField: View {
             SecureField("", text: $text)
                 .font(AuroraFont.bodyMedium)
                 .foregroundStyle(Aurora.ink)
-                .focused($isFocused)
         } else {
             TextField("", text: $text)
                 .font(AuroraFont.bodyMedium)
@@ -71,7 +71,6 @@ struct AuroraTextField: View {
                 .keyboardType(keyboardType)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .focused($isFocused)
         }
     }
 }

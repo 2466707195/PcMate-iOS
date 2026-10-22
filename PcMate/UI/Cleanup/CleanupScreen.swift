@@ -28,11 +28,15 @@ struct CleanupScreen: View {
                     EmptyView()
                 }
             } content: {
-                AuroraScrollView(bottomInset: 140) {
+                AuroraScrollView(bottomInset: 174) {
                     introCard
                     modeCard
                     if let errorMessage {
-                        banner(icon: "exclamationmark.triangle.fill", text: errorMessage, color: Aurora.rose, background: Aurora.roseContainer)
+                        AuroraBanner(
+                            systemIcon: "exclamationmark.triangle.fill",
+                            text: errorMessage,
+                            tone: Aurora.rose
+                        )
                     }
                     if let result {
                         resultCard(result)
@@ -40,6 +44,18 @@ struct CleanupScreen: View {
                 }
             } bar: {
                 GlassBar {
+                    HStack(spacing: 8) {
+                        Text(selected?.title ?? "选择清理方式")
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        StatusPill(
+                            text: hostInfo?.os == .windows ? "Windows" : "Linux",
+                            color: Aurora.teal
+                        )
+                    }
+                    Spacer().frame(height: 10)
                     if result != nil {
                         PrimaryButton(text: "完成", systemIcon: "checkmark") {
                             dismiss()
@@ -95,18 +111,22 @@ struct CleanupScreen: View {
     private var modeCard: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 9) {
-                Text("清理方式")
-                    .font(AuroraFont.titleMedium)
-                    .foregroundStyle(Aurora.ink)
+                AuroraSectionHeader(
+                    title: "清理方式",
+                    subtitle: "按系统能力选择",
+                    systemIcon: "sparkles",
+                    trailingText: "\(modes.count) 种"
+                )
 
                 ForEach(modes) { mode in
+                    let isSelected = selected == mode
                     Button {
                         selected = mode
                     } label: {
                         HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: selected == mode ? "largecircle.fill.circle" : "circle")
+                            Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
                                 .font(.system(size: 18))
-                                .foregroundStyle(selected == mode ? Aurora.brand : Aurora.outline)
+                                .foregroundStyle(isSelected ? Aurora.brand : Aurora.outline)
                                 .padding(.top, 1)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(mode.title)
@@ -123,11 +143,11 @@ struct CleanupScreen: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(selected == mode ? Aurora.brandContainer.opacity(0.55) : Aurora.surfaceVariant.opacity(0.6))
+                                .fill(isSelected ? Aurora.brandContainer : Aurora.surfaceVariant)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(selected == mode ? Aurora.brand.opacity(0.3) : Color.clear, lineWidth: 1)
+                                .stroke(isSelected ? Aurora.brand : Color.clear, lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
@@ -212,24 +232,7 @@ struct CleanupScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Aurora.surfaceVariant.opacity(0.7)))
-    }
-
-    private func banner(icon: String, text: String, color: Color, background: Color) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(color)
-                .padding(.top, 1)
-            Text(text)
-                .font(AuroraFont.bodySmall)
-                .foregroundStyle(color)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(11)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(background))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Aurora.surfaceVariant))
     }
 
     private func run() {

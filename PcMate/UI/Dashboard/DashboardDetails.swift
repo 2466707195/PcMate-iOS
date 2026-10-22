@@ -341,7 +341,8 @@ private struct NetworkDetailView: View {
                         DetailBanner(
                             text: errorMessage + "\n网络详情需要 PcMate Agent 1.2.0 及以上版本。",
                             color: Aurora.rose,
-                            background: Aurora.roseContainer
+                            background: Aurora.roseContainer,
+                            systemIcon: "exclamationmark.triangle.fill"
                         )
                     }
 
@@ -576,7 +577,8 @@ private struct GpuDetailView: View {
                         DetailBanner(
                             text: errorMessage + "\n显卡列表需要 PcMate Agent 1.2.0 及以上版本。",
                             color: Aurora.rose,
-                            background: Aurora.roseContainer
+                            background: Aurora.roseContainer,
+                            systemIcon: "exclamationmark.triangle.fill"
                         )
                     }
 
@@ -747,7 +749,8 @@ private struct HardwareDetailView: View {
                             DetailBanner(
                                 text: error + "\n硬件信息需要 PcMate Agent 1.4.0 及以上版本。",
                                 color: Aurora.rose,
-                                background: Aurora.roseContainer
+                                background: Aurora.roseContainer,
+                                systemIcon: "exclamationmark.triangle.fill"
                             )
                         }
                     }
@@ -1010,10 +1013,11 @@ private struct DetailBanner: View {
     let text: String
     let color: Color
     let background: Color
+    var systemIcon: String = "info.circle.fill"
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "info.circle.fill")
+            Image(systemName: systemIcon)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(color)
                 .padding(.top, 1)

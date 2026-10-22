@@ -1,6 +1,6 @@
 import SwiftUI
 
-// === Aurora UI 设计 token（Hyperdown iOS）===
+// === Aurora UI 设计 token（iOS / SwiftUI）===
 // 与 Android 版 `ui/theme/Theme.kt` 一一对应，数值完全一致。
 
 enum Aurora {

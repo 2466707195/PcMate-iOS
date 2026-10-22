@@ -13,32 +13,22 @@ struct HomeScreen: View {
                 AuroraBackdrop()
                 AuroraScreen {
                     AppTopBar(title: "PcMate", subtitle: "把电脑装进口袋") {
-                        Button {
+                        AuroraIconButton(systemIcon: "plus") {
                             showAdd = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(Aurora.brand)
-                                .frame(width: AuroraMetrics.iconButtonSize, height: AuroraMetrics.iconButtonSize)
-                                .background(Circle().fill(Aurora.brandContainer))
                         }
-                        .buttonStyle(.plain)
                     }
                 } content: {
-                    AuroraScrollView(bottomInset: 150) {
+                    AuroraScrollView(bottomInset: 172) {
                         hero
                         if store.connections.isEmpty {
                             emptyState
                         } else {
-                            HStack {
-                                Text("我的电脑")
-                                    .font(AuroraFont.titleMedium)
-                                    .foregroundStyle(Aurora.ink)
-                                Spacer()
-                                Text("\(store.connections.count) 台")
-                                    .font(AuroraFont.labelMedium)
-                                    .foregroundStyle(Aurora.inkSoft)
-                            }
+                            AuroraSectionHeader(
+                                title: "我的电脑",
+                                subtitle: "点卡片进入仪表盘",
+                                systemIcon: "desktopcomputer",
+                                trailingText: "\(store.connections.count) 台"
+                            )
                             .padding(.top, 6)
 
                             ForEach(store.connections) { connection in
@@ -48,6 +38,14 @@ struct HomeScreen: View {
                     }
                 } bar: {
                     GlassBar {
+                        HStack(spacing: 8) {
+                            Text(store.connections.isEmpty ? "还没有电脑" : "\(store.connections.count) 台电脑")
+                                .font(AuroraFont.bodySmall)
+                                .foregroundStyle(Aurora.inkSoft)
+                            Spacer(minLength: 0)
+                            StatusPill(text: "仅局域网", color: Aurora.teal)
+                        }
+                        Spacer().frame(height: 10)
                         PrimaryButton(
                             text: store.connections.isEmpty ? "添加第一台电脑" : "添加另一台电脑",
                             systemIcon: "plus"
@@ -88,60 +86,51 @@ struct HomeScreen: View {
         }
     }
 
-    // MARK: 顶部渐变卡
+    // MARK: 顶部介绍卡
 
     private var hero: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Aurora.brandGradient)
-                .shadow(color: Aurora.brand.opacity(0.22), radius: 14, x: 0, y: 7)
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    RoundedRectangle(cornerRadius: 17, style: .continuous)
+                        .fill(Aurora.brandContainer)
+                        .frame(width: 56, height: 56)
+                        .overlay(
+                            Image(systemName: "desktopcomputer")
+                                .font(.system(size: 25, weight: .semibold))
+                                .foregroundStyle(Aurora.brand)
+                        )
 
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(Color.white.opacity(0.92))
-                            .frame(width: 6, height: 6)
-                        Text("局域网直连")
-                            .font(AuroraFont.labelSmall)
-                            .foregroundStyle(Color.white.opacity(0.92))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("远程看电脑")
+                            .font(AuroraFont.headlineSmall)
+                            .foregroundStyle(Aurora.ink)
+                            .tracking(-0.4)
+                        Text("实时状态 · 进程管理 · 文件传输")
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(Color.white.opacity(0.16)))
 
-                    Text("远程看电脑")
-                        .font(.system(size: 27, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .tracking(-0.6)
-
-                    Text("实时状态 · 进程管理 · 文件传输")
-                        .font(AuroraFont.bodySmall)
-                        .foregroundStyle(Color.white.opacity(0.82))
-
-                    HStack(spacing: 8) {
-                        Image(systemName: "lock.shield.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("证书指纹固定 · TOFU")
-                            .font(AuroraFont.labelSmall)
-                    }
-                    .foregroundStyle(Color.white.opacity(0.82))
-                    .padding(.top, 2)
+                    Spacer(minLength: 4)
                 }
 
-                Spacer(minLength: 0)
+                HStack(spacing: 8) {
+                    StatusPill(text: "局域网直连", color: Aurora.teal)
+                    StatusPill(text: "证书固定", color: Aurora.brand)
+                }
 
-                Image(systemName: "desktopcomputer")
-                    .font(.system(size: 42, weight: .light))
-                    .foregroundStyle(Color.white.opacity(0.9))
-                    .padding(.top, 4)
+                HStack(spacing: 7) {
+                    Image(systemName: "bolt.horizontal.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Aurora.brand)
+                    Text("Agent 实时推送 · SSH 自动回退")
+                        .font(AuroraFont.labelSmall)
+                        .foregroundStyle(Aurora.inkSoft)
+                }
+                .padding(.top, 2)
             }
-            .padding(18)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
-        )
     }
 
     // MARK: 空状态
@@ -167,56 +156,44 @@ struct HomeScreen: View {
 
     private func connectionCard(_ connection: Connection) -> some View {
         NavigationLink(value: connection) {
-            HStack(spacing: 12) {
-                Monogram(name: connection.name, tone: connection.transport == .agent ? Aurora.brand : Aurora.teal, size: 46)
+            SectionCard {
+                HStack(spacing: 12) {
+                    Monogram(name: connection.name, tone: connection.transport == .agent ? Aurora.brand : Aurora.teal, size: 46)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 7) {
-                        Text(connection.name)
-                            .font(AuroraFont.titleMedium)
-                            .foregroundStyle(Aurora.ink)
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 7) {
+                            Text(connection.name)
+                                .font(AuroraFont.titleMedium)
+                                .foregroundStyle(Aurora.ink)
+                                .lineLimit(1)
+                            if connection.transport == .agent && connection.agentToken.isEmpty {
+                                StatusPill(text: "未配对", color: Aurora.warning)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                        Text(connection.address)
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
                             .lineLimit(1)
-                        if connection.transport == .agent && connection.agentToken.isEmpty {
-                            Text("未配对")
+                        HStack(spacing: 7) {
+                            StatusPill(
+                                text: connection.transportLabel,
+                                color: connection.transport == .agent ? Aurora.brand : Aurora.teal
+                            )
+                            .allowsHitTesting(false)
+                            Text(Fmt.relative(connection.lastUsedAt))
                                 .font(AuroraFont.labelSmall)
-                                .foregroundStyle(Aurora.warning)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(Aurora.warningContainer))
+                                .foregroundStyle(Aurora.muted)
                         }
                     }
-                    Text(connection.address)
-                        .font(AuroraFont.bodySmall)
-                        .foregroundStyle(Aurora.inkSoft)
-                        .lineLimit(1)
-                    HStack(spacing: 7) {
-                        Text(connection.transportLabel)
-                            .font(AuroraFont.labelSmall)
-                            .foregroundStyle(connection.transport == .agent ? Aurora.brand : Aurora.teal)
-                        Text("·")
-                            .foregroundStyle(Aurora.muted)
-                        Text(Fmt.relative(connection.lastUsedAt))
-                            .font(AuroraFont.labelSmall)
-                            .foregroundStyle(Aurora.muted)
-                    }
+
+                    Spacer(minLength: 4)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Aurora.muted)
                 }
-
-                Spacer(minLength: 4)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Aurora.muted)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                AuroraShape.card
-                    .fill(Color.white)
-                    .shadow(color: Aurora.cardShadow, radius: 4, x: 0, y: 1)
-            )
-            .overlay(
-                AuroraShape.card.stroke(Aurora.line.opacity(0.55), lineWidth: 1)
-            )
         }
         .buttonStyle(PressScaleStyle())
         .contextMenu {

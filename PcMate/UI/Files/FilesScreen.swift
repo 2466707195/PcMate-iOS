@@ -25,18 +25,14 @@ struct FilesScreen: View {
                     subtitle: model.currentPath.isEmpty ? "此电脑" : model.currentPath,
                     onBack: { dismiss() }
                 ) {
-                    HStack(spacing: 2) {
-                        Button {
+                    HStack(spacing: 6) {
+                        AuroraIconButton(
+                            systemIcon: "arrow.clockwise",
+                            tone: Aurora.brand,
+                            enabled: !model.loading
+                        ) {
                             Task { await model.load() }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Aurora.brand)
-                                .frame(width: 38, height: 38)
-                                .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
-                        .disabled(model.loading)
 
                         Menu {
                             Button {
@@ -54,23 +50,31 @@ struct FilesScreen: View {
                             .disabled(!model.canWrite)
                         } label: {
                             Image(systemName: "ellipsis")
-                                .font(.system(size: 17, weight: .semibold))
+                                .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(Aurora.inkSoft)
-                                .frame(width: 38, height: 38)
-                                .contentShape(Rectangle())
+                                .frame(width: 40, height: 40)
+                                .background(Circle().fill(Aurora.inkSoft.tint(0.13)))
+                                .contentShape(Circle())
                         }
                     }
                 }
             } content: {
-                AuroraScrollView(bottomInset: 150) {
-                    breadcrumbBar
-                    searchField
+                AuroraScrollView(bottomInset: 186) {
+                    pathCard
 
                     if let action = model.actionMessage {
-                        banner(icon: "checkmark.circle.fill", text: action, color: Aurora.success, background: Aurora.successContainer)
+                        AuroraBanner(
+                            systemIcon: "checkmark.circle.fill",
+                            text: action,
+                            tone: Aurora.success
+                        )
                     }
                     if let error = model.errorMessage {
-                        banner(icon: "exclamationmark.triangle.fill", text: error, color: Aurora.rose, background: Aurora.roseContainer)
+                        AuroraBanner(
+                            systemIcon: "exclamationmark.triangle.fill",
+                            text: error,
+                            tone: Aurora.rose
+                        )
                     }
                     if model.uploading {
                         SectionCard {
@@ -89,6 +93,18 @@ struct FilesScreen: View {
                 }
             } bar: {
                 GlassBar {
+                    HStack(spacing: 7) {
+                        Image(systemName: "folder.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Aurora.brand)
+                        Text(model.currentPath.isEmpty ? "此电脑" : model.currentPath)
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        StatusPill(text: "\(model.entries.count) 项", color: Aurora.info)
+                    }
+                    Spacer().frame(height: 10)
                     HStack(spacing: 8) {
                         SmallTonalButton(text: "上一级", systemIcon: "arrow.up", enabled: model.canGoUp, expands: true) {
                             Task { await model.goUp() }
@@ -160,42 +176,58 @@ struct FilesScreen: View {
         }
     }
 
-    private var breadcrumbBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 5) {
-                ForEach(model.breadcrumbs) { crumb in
-                    Button {
-                        Task { await model.load(path: crumb.path) }
-                    } label: {
-                        Text(crumb.title)
-                            .font(AuroraFont.labelMedium)
-                            .foregroundStyle(crumb.id == model.breadcrumbs.last?.id ? Aurora.ink : Aurora.brand)
-                            .lineLimit(1)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(
-                                Capsule().fill(crumb.id == model.breadcrumbs.last?.id ? Aurora.surfaceVariant : Aurora.brandContainer.opacity(0.7))
-                            )
-                    }
-                    .buttonStyle(.plain)
-
-                    if crumb.id != model.breadcrumbs.last?.id {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(Aurora.muted)
-                    }
+    private var pathCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 11) {
+                HStack(spacing: 8) {
+                    Image(systemName: "externaldrive.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Aurora.brand)
+                    Text("当前位置")
+                        .font(AuroraFont.labelMedium)
+                        .foregroundStyle(Aurora.inkSoft)
+                    Spacer(minLength: 0)
+                    Text("\(model.entries.count) 项")
+                        .font(AuroraFont.labelSmall)
+                        .foregroundStyle(Aurora.muted)
                 }
-            }
-            .padding(.vertical, 1)
-        }
-    }
 
-    private var searchField: some View {
-        AuroraTextField(
-            placeholder: "在当前目录搜索",
-            text: $model.search,
-            systemIcon: "magnifyingglass"
-        )
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 5) {
+                        ForEach(model.breadcrumbs) { crumb in
+                            let selected = crumb.id == model.breadcrumbs.last?.id
+                            Button {
+                                Task { await model.load(path: crumb.path) }
+                            } label: {
+                                Text(crumb.title)
+                                    .font(AuroraFont.labelMedium)
+                                    .foregroundStyle(selected ? Aurora.onBrandContainer : Aurora.inkSoft)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 9)
+                                    .padding(.vertical, 5)
+                                    .background(
+                                        Capsule().fill(selected ? Aurora.brandContainer : Aurora.surfaceVariant)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+
+                            if !selected {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(Aurora.muted)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
+
+                AuroraTextField(
+                    placeholder: "在当前目录搜索",
+                    text: $model.search,
+                    systemIcon: "magnifyingglass"
+                )
+            }
+        }
     }
 
     @ViewBuilder
@@ -292,22 +324,6 @@ struct FilesScreen: View {
         }
     }
 
-    private func banner(icon: String, text: String, color: Color, background: Color) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(color)
-                .padding(.top, 1)
-            Text(text)
-                .font(AuroraFont.bodySmall)
-                .foregroundStyle(color)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(11)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(background))
-    }
 }
 
 private struct FileRow: View {

@@ -32,18 +32,14 @@ struct DashboardScreen: View {
                         dismiss()
                     }
                 ) {
-                    HStack(spacing: 2) {
-                        Button {
+                    HStack(spacing: 6) {
+                        AuroraIconButton(
+                            systemIcon: "arrow.clockwise",
+                            tone: Aurora.brand,
+                            enabled: model.isConnected
+                        ) {
                             model.refresh()
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Aurora.brand)
-                                .frame(width: 38, height: 38)
-                                .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
-                        .disabled(!model.isConnected)
 
                         Menu {
                             Button {
@@ -100,35 +96,34 @@ struct DashboardScreen: View {
                             }
                         } label: {
                             Image(systemName: "ellipsis")
-                                .font(.system(size: 17, weight: .semibold))
+                                .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(Aurora.inkSoft)
-                                .frame(width: 38, height: 38)
-                                .contentShape(Rectangle())
+                                .frame(width: 40, height: 40)
+                                .background(Circle().fill(Aurora.inkSoft.tint(0.13)))
+                                .contentShape(Circle())
                         }
                     }
                 }
             } content: {
-                AuroraScrollView(bottomInset: 150) {
+                AuroraScrollView(bottomInset: 172) {
                     if model.connecting {
                         connectingCard
                     }
 
                     if let fallback = model.fallbackNotice {
-                        banner(
-                            icon: "arrow.triangle.swap",
+                        AuroraBanner(
+                            systemIcon: "arrow.triangle.swap",
                             text: fallback,
-                            color: Aurora.warning,
-                            background: Aurora.warningContainer
+                            tone: Aurora.warning
                         )
                     }
 
                     if let error = model.errorMessage {
                         if model.isConnected {
-                            banner(
-                                icon: "exclamationmark.triangle.fill",
+                            AuroraBanner(
+                                systemIcon: "exclamationmark.triangle.fill",
                                 text: error,
-                                color: Aurora.rose,
-                                background: Aurora.roseContainer
+                                tone: Aurora.rose
                             )
                         } else {
                             errorCard(error)
@@ -148,6 +143,20 @@ struct DashboardScreen: View {
                 }
             } bar: {
                 GlassBar {
+                    HStack(spacing: 8) {
+                        Text(model.lastUpdated.map {
+                            "更新 \(Fmt.relative(Int64($0.timeIntervalSince1970 * 1000)))"
+                        } ?? "等待状态")
+                            .font(AuroraFont.bodySmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        StatusPill(
+                            text: model.isConnected ? "已连接" : "未连接",
+                            color: model.isConnected ? Aurora.teal : Aurora.muted
+                        )
+                    }
+                    Spacer().frame(height: 10)
                     HStack(spacing: 8) {
                         SmallTonalButton(text: "进程", systemIcon: "list.bullet.rectangle", expands: true) {
                             showProcesses = true
@@ -558,13 +567,11 @@ struct DashboardScreen: View {
                             .foregroundStyle(Aurora.inkSoft)
                     }
                 }
-                Text(error)
-                    .font(AuroraFont.bodySmall)
-                    .foregroundStyle(Aurora.rose)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Aurora.roseContainer.opacity(0.65)))
+                AuroraBanner(
+                    systemIcon: "exclamationmark.triangle.fill",
+                    text: error,
+                    tone: Aurora.rose
+                )
 
                 HStack(spacing: 9) {
                     TonalButton(text: "重试", systemIcon: "arrow.clockwise") {
@@ -578,22 +585,6 @@ struct DashboardScreen: View {
         }
     }
 
-    private func banner(icon: String, text: String, color: Color, background: Color) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(color)
-                .padding(.top, 1)
-            Text(text)
-                .font(AuroraFont.bodySmall)
-                .foregroundStyle(color)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(11)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(background))
-    }
 }
 
 // MARK: - 环形指标
