@@ -365,6 +365,70 @@ struct RemoteSysInfo: Equatable {
     var totalMemBytes: Int64 = 0
 }
 
+// MARK: - 硬件信息（Agent 1.4.0 起，按需拉取）
+
+struct HardwareMemoryModule: Identifiable, Equatable {
+    var id: String { slot + partNumber + "\(sizeBytes)" }
+    var slot: String = ""
+    var sizeBytes: Int64 = 0
+    var speedMhz: Int = 0
+    var manufacturer: String = ""
+    var partNumber: String = ""
+}
+
+struct HardwareDisk: Identifiable, Equatable {
+    var id: String { name + serial + "\(sizeBytes)" }
+    var name: String = ""
+    var sizeBytes: Int64 = 0
+    var media: String = ""
+    var interfaceName: String = ""
+    var serial: String = ""
+    var health: String = ""
+}
+
+struct HardwareBattery: Equatable {
+    var name: String = ""
+    var percent: Int = 0
+    var status: String = ""
+}
+
+struct HardwareSummary: Equatable {
+    var systemManufacturer: String = ""
+    var systemModel: String = ""
+    var systemSerial: String = ""
+    var boardManufacturer: String = ""
+    var boardProduct: String = ""
+    var boardVersion: String = ""
+    var boardSerial: String = ""
+    var biosVendor: String = ""
+    var biosVersion: String = ""
+    var biosDate: String = ""
+    var memory: [HardwareMemoryModule] = []
+    var memoryTotalBytes: Int64 = 0
+    var disks: [HardwareDisk] = []
+    var gpus: [GpuDetail] = []
+    var battery: HardwareBattery?
+
+    var machineName: String {
+        let parts = [systemManufacturer, systemModel]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? "未知机型" : parts.joined(separator: " ")
+    }
+
+    var boardName: String {
+        let parts = [boardManufacturer, boardProduct]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? "" : parts.joined(separator: " ")
+    }
+
+    var hasAnyData: Bool {
+        !systemModel.isEmpty || !boardProduct.isEmpty || !memory.isEmpty ||
+            !disks.isEmpty || !gpus.isEmpty || battery != nil
+    }
+}
+
 // MARK: - 文件
 
 struct RemoteFileEntry: Identifiable, Equatable, Hashable {

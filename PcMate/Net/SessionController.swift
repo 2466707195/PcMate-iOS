@@ -199,6 +199,13 @@ final class SessionController: ObservableObject {
         return try await agent.sysInfo()
     }
 
+    func hardware() async throws -> HardwareSummary {
+        guard let agent else {
+            throw PcMateError.message("硬件信息需要 Agent 连接，SSH 模式暂不支持")
+        }
+        return try await agent.hardware()
+    }
+
     // MARK: 文件
 
     func list(path: String) async throws -> RemoteListing {

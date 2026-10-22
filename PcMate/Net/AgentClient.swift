@@ -275,6 +275,11 @@ final class AgentClient: NSObject {
         return AgentParser.sysInfo(data)
     }
 
+    func hardware() async throws -> HardwareSummary {
+        let data = try await request(action: "hardware", timeout: 40)
+        return AgentParser.hardware(data)
+    }
+
     private func failAll(_ error: Error) {
         if let continuation = welcomeContinuation {
             welcomeContinuation = nil
@@ -566,6 +571,64 @@ enum AgentParser {
             cpuModel: string(data["cpuModel"]),
             cores: int(data["cores"]) ?? 0,
             totalMemBytes: int64(data["totalMemBytes"]) ?? 0
+        )
+    }
+
+    static func hardware(_ data: [String: Any]) -> HardwareSummary {
+        let system = data["system"] as? [String: Any] ?? [:]
+        let board = data["board"] as? [String: Any] ?? [:]
+        let bios = data["bios"] as? [String: Any] ?? [:]
+
+        var battery: HardwareBattery?
+        if let item = data["battery"] as? [String: Any] {
+            battery = HardwareBattery(
+                name: string(item["name"]),
+                percent: int(item["percent"]) ?? 0,
+                status: string(item["status"])
+            )
+        }
+
+        return HardwareSummary(
+            systemManufacturer: string(system["manufacturer"]),
+            systemModel: string(system["model"]),
+            systemSerial: string(system["serial"]),
+            boardManufacturer: string(board["manufacturer"]),
+            boardProduct: string(board["product"]),
+            boardVersion: string(board["version"]),
+            boardSerial: string(board["serial"]),
+            biosVendor: string(bios["vendor"]),
+            biosVersion: string(bios["version"]),
+            biosDate: string(bios["date"]),
+            memory: (data["memory"] as? [[String: Any]] ?? []).map { item in
+                HardwareMemoryModule(
+                    slot: string(item["slot"]),
+                    sizeBytes: int64(item["sizeBytes"]) ?? 0,
+                    speedMhz: int(item["speedMhz"]) ?? 0,
+                    manufacturer: string(item["manufacturer"]),
+                    partNumber: string(item["partNumber"])
+                )
+            },
+            memoryTotalBytes: int64(data["memoryTotalBytes"]) ?? 0,
+            disks: (data["disks"] as? [[String: Any]] ?? []).map { item in
+                HardwareDisk(
+                    name: string(item["name"]),
+                    sizeBytes: int64(item["sizeBytes"]) ?? 0,
+                    media: string(item["media"]),
+                    interfaceName: string(item["interface"]),
+                    serial: string(item["serial"]),
+                    health: string(item["health"])
+                )
+            },
+            gpus: (data["gpus"] as? [[String: Any]] ?? []).map { item in
+                GpuDetail(
+                    name: string(item["name"]),
+                    vendor: string(item["vendor"]),
+                    driver: string(item["driver"]),
+                    memBytes: int64(item["memBytes"]) ?? 0,
+                    status: string(item["status"])
+                )
+            },
+            battery: battery
         )
     }
 

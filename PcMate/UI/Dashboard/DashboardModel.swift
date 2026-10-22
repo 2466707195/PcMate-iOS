@@ -17,6 +17,9 @@ final class DashboardModel: ObservableObject {
     @Published var fallbackNotice: String?
     @Published private(set) var connecting = false
     @Published private(set) var lastUpdated: Date?
+    @Published private(set) var hardware: HardwareSummary?
+    @Published private(set) var hardwareLoading = false
+    @Published private(set) var hardwareError: String?
 
     private var pollTask: Task<Void, Never>?
     private var lastSnapshotMs: Int64 = 0
@@ -62,6 +65,27 @@ final class DashboardModel: ObservableObject {
         hostInfo = nil
         snapshot = nil
         lastUpdated = nil
+        hardware = nil
+        hardwareError = nil
+        hardwareLoading = false
+    }
+
+    /// 读取硬件信息（主板 / 内存条 / 硬盘 / 电池）。Agent 端会缓存 3 分钟。
+    func loadHardware(force: Bool = false) async {
+        guard session.activeTransport == .agent else {
+            hardwareError = "硬件信息需要 Agent 连接，SSH 模式暂不支持"
+            return
+        }
+        guard !hardwareLoading else { return }
+        if !force, hardware != nil { return }
+        hardwareLoading = true
+        hardwareError = nil
+        do {
+            hardware = try await session.hardware()
+        } catch {
+            hardwareError = error.localizedDescription
+        }
+        hardwareLoading = false
     }
 
     private func connect() async {
@@ -77,6 +101,7 @@ final class DashboardModel: ObservableObject {
             connecting = false
             await refreshOnce()
             startPolling()
+            await loadHardware()
         } catch {
             connecting = false
             hostInfo = nil

@@ -1,6 +1,6 @@
 # PcMate iOS
 
-PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版、PcMate Agent 1.3.0 兼容（旧版 Agent 仍可连接，只是缺文件接口、详情面板和电源菜单）。
+PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版、PcMate Agent 1.4.0 兼容（旧版 Agent 仍可连接，只是缺文件接口、详情面板、电源菜单和硬件信息）。
 
 没有 Mac 也能构建：工程通过 XcodeGen 生成，在 GitHub Actions 或 Codemagic 的 macOS runner 上编译出**未签名 ipa**，再用「全能签 / ESign」重签安装到 iPhone。
 
@@ -38,6 +38,12 @@ PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版�
   - Windows 用 `tsdiscon`（服务运行在 session 0，直接 LockWorkStation 锁不到桌面）、`SetSuspendState`、`shutdown`。
   - Linux 用 `logind` / `systemctl`。
   - 关机后 Agent 会停止，需要在本机重新开机；重启后服务会自动恢复。
+- **硬件信息**（仪表盘「硬件信息」卡片，需要 Agent 1.4.0）
+  - 主机厂商 / 型号 / 序列号、主板、BIOS 版本与日期。
+  - 内存条：插槽、容量、频率、品牌、型号。
+  - 硬盘：型号、容量、SSD/HDD、接口（NVMe / SATA）、序列号、健康状态。
+  - 显卡列表、笔记本电池电量与充电状态。
+  - Agent 端缓存 3 分钟，避免频繁调用 WMI / dmidecode。
 - **安全存储**
   - 密码、私钥、Agent 令牌、证书/主机指纹保存在 iOS Keychain。
   - UserDefaults 只保存连接元数据。
@@ -49,7 +55,7 @@ PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版�
 | 项目 | 要求 |
 | --- | --- |
 | iPhone | iOS 16.4 或更高 |
-| 电脑端 | PcMate Agent 1.3.0（Windows / Linux），或开启 OpenSSH 服务 |
+| 电脑端 | PcMate Agent 1.4.0（Windows / Linux），或开启 OpenSSH 服务 |
 | 网络 | iPhone 与电脑在同一局域网 |
 | 构建 | macOS + Xcode 15.4（云端 runner 已满足） |
 | 构建工具 | XcodeGen **2.38.0**（脚本会自动安装固定版本） |
@@ -238,11 +244,15 @@ Copy-Item .\pcmate-agent-windows-amd64.exe "C:\Program Files\PcMate\pcmate-agent
 sc.exe start PcMateAgent
 ```
 
-升级不会更换令牌和证书，手机端不需要重新配对。可以用 `https://<电脑IP>:8765/health` 确认版本已变成 1.2.0。
+升级不会更换令牌和证书，手机端不需要重新配对。可以用 `https://<电脑IP>:8765/health` 确认版本已变成 1.4.0。
 
 ### 详情面板里网络 / 显卡显示“需要 Agent 1.2.0”
 
 同样是 Agent 版本问题：`netinfo`、`gpuinfo`、`sysinfo` 是 1.2.0 新增接口。旧版 Agent 仍可正常看仪表盘、进程、文件和清理。
+
+### 硬件信息显示“需要 Agent 1.4.0”
+
+`hardware` 是 1.4.0 新增接口。升级 Agent 后重新连接即可；Linux 上内存条信息依赖 `dmidecode`（`sudo apt install dmidecode`），虚拟机可能不提供。
 
 ### 文件下载后在哪里
 

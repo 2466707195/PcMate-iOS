@@ -9,6 +9,7 @@ enum DashboardDetail: String, Identifiable {
     case network
     case gpu
     case uptime
+    case hardware
 
     var id: String { rawValue }
 
@@ -19,6 +20,7 @@ enum DashboardDetail: String, Identifiable {
         case .network: return "网络"
         case .gpu: return "显卡"
         case .uptime: return "运行时间"
+        case .hardware: return "硬件信息"
         }
     }
 
@@ -29,6 +31,7 @@ enum DashboardDetail: String, Identifiable {
         case .network: return "流量、无线与蓝牙"
         case .gpu: return "显卡列表与驱动"
         case .uptime: return "开机时间与连接信息"
+        case .hardware: return "主板、内存条、硬盘与电池"
         }
     }
 }
@@ -61,6 +64,8 @@ struct DashboardDetailSheet: View {
                         GpuDetailView(model: model)
                     case .uptime:
                         UptimeDetailView(model: model)
+                    case .hardware:
+                        HardwareDetailView(model: model)
                     }
                 }
             } bar: {
@@ -709,6 +714,263 @@ private struct UptimeDetailView: View {
         if let version = sysInfo?.agentVersion, !version.isEmpty { return version }
         if let version = model.hostInfo?.agentVersion, !version.isEmpty { return version }
         return "—"
+    }
+}
+
+// MARK: - 硬件信息
+
+private struct HardwareDetailView: View {
+
+    @ObservedObject var model: DashboardModel
+
+    var body: some View {
+        VStack(spacing: AuroraMetrics.cardSpacing) {
+            if let hardware = model.hardware, hardware.hasAnyData {
+                overviewCard(hardware)
+                memoryCard(hardware)
+                diskCard(hardware)
+                if !hardware.gpus.isEmpty {
+                    gpuCard(hardware)
+                }
+            } else {
+                SectionCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
+                            if model.hardwareLoading {
+                                ProgressView().tint(Aurora.brand)
+                            }
+                            Text(model.hardwareLoading ? "正在读取硬件信息…" : "还没有读到硬件信息")
+                                .font(AuroraFont.bodySmall)
+                                .foregroundStyle(Aurora.inkSoft)
+                        }
+                        if let error = model.hardwareError {
+                            DetailBanner(
+                                text: error + "\n硬件信息需要 PcMate Agent 1.4.0 及以上版本。",
+                                color: Aurora.rose,
+                                background: Aurora.roseContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            TonalButton(
+                text: "刷新硬件信息",
+                systemIcon: "arrow.clockwise",
+                enabled: !model.hardwareLoading
+            ) {
+                Task { await model.loadHardware(force: true) }
+            }
+        }
+        .task { await model.loadHardware() }
+    }
+
+    private func overviewCard(_ hardware: HardwareSummary) -> some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(hardware.machineName)
+                        .font(AuroraFont.titleMedium)
+                        .foregroundStyle(Aurora.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    if let battery = hardware.battery {
+                        StatusPill(
+                            text: "电池 \(battery.percent)%",
+                            color: battery.percent >= 30 ? Aurora.success : Aurora.warning
+                        )
+                    }
+                }
+                .padding(.bottom, 6)
+
+                if let battery = hardware.battery {
+                    let text = battery.status.isEmpty ? battery.name : "\(battery.name) · \(battery.status)"
+                    if !text.isEmpty {
+                        Text(text)
+                            .font(AuroraFont.labelSmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                            .padding(.bottom, 4)
+                    }
+                }
+
+                DetailRow(label: "制造商", value: hardware.systemManufacturer.isEmpty ? "—" : hardware.systemManufacturer)
+                DetailRow(label: "型号", value: hardware.systemModel.isEmpty ? "—" : hardware.systemModel)
+                if !hardware.systemSerial.isEmpty {
+                    DetailRow(label: "序列号", value: hardware.systemSerial)
+                }
+                DetailRow(label: "主板", value: hardware.boardName.isEmpty ? "—" : hardware.boardName)
+                if !hardware.boardVersion.isEmpty {
+                    DetailRow(label: "主板版本", value: hardware.boardVersion)
+                }
+                if !hardware.boardSerial.isEmpty {
+                    DetailRow(label: "主板序列", value: hardware.boardSerial)
+                }
+                DetailRow(label: "BIOS", value: biosText(hardware))
+                DetailRow(label: "BIOS 日期", value: hardware.biosDate.isEmpty ? "—" : hardware.biosDate)
+                DetailRow(label: "处理器", value: model.hostInfo?.cpuModel ?? "—")
+                DetailRow(
+                    label: "内存",
+                    value: hardware.memoryTotalBytes > 0 ? Fmt.bytes(hardware.memoryTotalBytes) : "—",
+                    showsDivider: false
+                )
+            }
+        }
+    }
+
+    private func memoryCard(_ hardware: HardwareSummary) -> some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("内存条")
+                        .font(AuroraFont.titleMedium)
+                        .foregroundStyle(Aurora.ink)
+                    Spacer(minLength: 0)
+                    Text(hardware.memoryTotalBytes > 0 ? "\(hardware.memory.count) 条 · \(Fmt.bytes(hardware.memoryTotalBytes))" : "\(hardware.memory.count) 条")
+                        .font(AuroraFont.labelSmall)
+                        .foregroundStyle(Aurora.muted)
+                }
+
+                if hardware.memory.isEmpty {
+                    Text("没有读取到内存条信息（Linux 需要安装 dmidecode，部分虚拟机也不提供）。")
+                        .font(AuroraFont.bodySmall)
+                        .foregroundStyle(Aurora.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(hardware.memory) { module in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "memorychip")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Aurora.teal)
+                                Text(module.slot.isEmpty ? "内存插槽" : module.slot)
+                                    .font(AuroraFont.labelMedium)
+                                    .foregroundStyle(Aurora.ink)
+                                    .lineLimit(1)
+                                Spacer(minLength: 4)
+                                Text(Fmt.bytes(module.sizeBytes))
+                                    .font(AuroraFont.labelMedium)
+                                    .foregroundStyle(Aurora.ink)
+                            }
+                            Text(memoryDetail(module))
+                                .font(AuroraFont.labelSmall)
+                                .foregroundStyle(Aurora.inkSoft)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 5)
+                    }
+                }
+            }
+        }
+    }
+
+    private func diskCard(_ hardware: HardwareSummary) -> some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("硬盘")
+                        .font(AuroraFont.titleMedium)
+                        .foregroundStyle(Aurora.ink)
+                    Spacer(minLength: 0)
+                    Text("\(hardware.disks.count) 块")
+                        .font(AuroraFont.labelSmall)
+                        .foregroundStyle(Aurora.muted)
+                }
+
+                if hardware.disks.isEmpty {
+                    Text("没有读取到物理硬盘信息。")
+                        .font(AuroraFont.bodySmall)
+                        .foregroundStyle(Aurora.muted)
+                } else {
+                    ForEach(hardware.disks) { disk in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "internaldrive.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Aurora.brand)
+                                Text(disk.name.isEmpty ? "未知硬盘" : disk.name)
+                                    .font(AuroraFont.labelMedium)
+                                    .foregroundStyle(Aurora.ink)
+                                    .lineLimit(2)
+                                Spacer(minLength: 4)
+                                Text(Fmt.bytes(disk.sizeBytes))
+                                    .font(AuroraFont.labelMedium)
+                                    .foregroundStyle(Aurora.ink)
+                            }
+                            HStack(spacing: 6) {
+                                if !disk.media.isEmpty {
+                                    StatusPill(text: disk.media, color: Aurora.brand)
+                                }
+                                if !disk.interfaceName.isEmpty {
+                                    StatusPill(text: disk.interfaceName, color: Aurora.teal)
+                                }
+                                if !disk.health.isEmpty {
+                                    StatusPill(text: disk.health, color: healthColor(disk.health))
+                                }
+                            }
+                            if !disk.serial.isEmpty {
+                                Text("序列号 \(disk.serial)")
+                                    .font(.system(size: 10.5, design: .monospaced))
+                                    .foregroundStyle(Aurora.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.vertical, 5)
+                    }
+                }
+            }
+        }
+    }
+
+    private func gpuCard(_ hardware: HardwareSummary) -> some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("显卡")
+                    .font(AuroraFont.titleMedium)
+                    .foregroundStyle(Aurora.ink)
+
+                ForEach(hardware.gpus) { gpu in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(gpu.name)
+                            .font(AuroraFont.labelMedium)
+                            .foregroundStyle(Aurora.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(gpuDetail(gpu))
+                            .font(AuroraFont.labelSmall)
+                            .foregroundStyle(Aurora.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 5)
+                }
+            }
+        }
+    }
+
+    private func biosText(_ hardware: HardwareSummary) -> String {
+        let parts = [hardware.biosVendor, hardware.biosVersion].filter { !$0.isEmpty }
+        return parts.isEmpty ? "—" : parts.joined(separator: " ")
+    }
+
+    private func memoryDetail(_ module: HardwareMemoryModule) -> String {
+        var parts: [String] = []
+        if module.speedMhz > 0 { parts.append("\(module.speedMhz) MHz") }
+        if !module.manufacturer.isEmpty { parts.append(module.manufacturer) }
+        if !module.partNumber.isEmpty { parts.append(module.partNumber) }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
+    private func gpuDetail(_ gpu: GpuDetail) -> String {
+        var parts: [String] = []
+        if !gpu.vendor.isEmpty { parts.append(gpu.vendor) }
+        if gpu.memBytes > 0 { parts.append("显存 \(Fmt.bytes(gpu.memBytes))") }
+        if !gpu.driver.isEmpty { parts.append("驱动 \(gpu.driver)") }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
+    private func healthColor(_ health: String) -> Color {
+        let lower = health.lowercased()
+        if lower.contains("unhealthy") || lower.contains("warning") { return Aurora.rose }
+        if lower.contains("healthy") || lower.contains("ok") { return Aurora.success }
+        return Aurora.muted
     }
 }
 

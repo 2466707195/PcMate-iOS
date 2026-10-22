@@ -140,6 +140,7 @@ struct DashboardScreen: View {
                         bigMetricGrid(snapshot)
                         smallMetricRow(snapshot)
                         diskCard(snapshot)
+                        hardwareCard
                         systemCard(snapshot)
                     } else if !model.connecting && model.errorMessage == nil {
                         loadingCard
@@ -376,6 +377,103 @@ struct DashboardScreen: View {
                 }
             }
         }
+    }
+
+    private var hardwareCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 8) {
+                    Text("硬件信息")
+                        .font(AuroraFont.titleMedium)
+                        .foregroundStyle(Aurora.ink)
+                    Spacer(minLength: 0)
+                    if model.hardwareLoading {
+                        ProgressView()
+                            .tint(Aurora.brand)
+                            .scaleEffect(0.85)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Aurora.muted.opacity(0.8))
+                    }
+                }
+                .padding(.bottom, 8)
+
+                if let hardware = model.hardware, hardware.hasAnyData {
+                    InfoRow(label: "主机", value: hardware.machineName)
+                    if !hardware.boardName.isEmpty {
+                        InfoRow(label: "主板", value: hardware.boardName)
+                    }
+                    if !hardware.biosVersion.isEmpty {
+                        InfoRow(label: "BIOS", value: biosLine(hardware))
+                    }
+                    InfoRow(label: "内存", value: memoryLine(hardware))
+                    if !hardware.disks.isEmpty {
+                        InfoRow(label: "硬盘", value: diskLine(hardware))
+                    }
+                    if let battery = hardware.battery {
+                        InfoRow(label: "电池", value: batteryLine(battery))
+                    }
+                } else if let error = model.hardwareError {
+                    Text(error)
+                        .font(AuroraFont.bodySmall)
+                        .foregroundStyle(Aurora.rose)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 4)
+                } else {
+                    Text(model.hardwareLoading ? "正在读取硬件信息…" : "主板、内存条、硬盘与电池")
+                        .font(AuroraFont.bodySmall)
+                        .foregroundStyle(Aurora.muted)
+                        .padding(.vertical, 4)
+                }
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .onTapGesture {
+            detail = .hardware
+            if model.hardware == nil {
+                Task { await model.loadHardware(force: true) }
+            }
+        }
+    }
+
+    private func biosLine(_ hardware: HardwareSummary) -> String {
+        let parts = [hardware.biosVendor, hardware.biosVersion, hardware.biosDate]
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
+    private func memoryLine(_ hardware: HardwareSummary) -> String {
+        var parts: [String] = []
+        if hardware.memoryTotalBytes > 0 {
+            parts.append(Fmt.bytes(hardware.memoryTotalBytes))
+        }
+        if !hardware.memory.isEmpty {
+            parts.append("\(hardware.memory.count) 条")
+        }
+        if let speed = hardware.memory.compactMap({ $0.speedMhz > 0 ? $0.speedMhz : nil }).max() {
+            parts.append("\(speed) MHz")
+        }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
+    private func diskLine(_ hardware: HardwareSummary) -> String {
+        let models = hardware.disks.map { $0.name }.filter { !$0.isEmpty }
+        if models.isEmpty {
+            return "\(hardware.disks.count) 块硬盘"
+        }
+        if models.count == 1 {
+            return models[0]
+        }
+        return "\(models[0]) 等 \(hardware.disks.count) 块"
+    }
+
+    private func batteryLine(_ battery: HardwareBattery) -> String {
+        var text = "\(battery.percent)%"
+        if !battery.status.isEmpty {
+            text += " · \(battery.status)"
+        }
+        return text
     }
 
     private func systemCard(_ snapshot: Snapshot) -> some View {
