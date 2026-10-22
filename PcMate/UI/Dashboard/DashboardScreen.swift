@@ -195,7 +195,7 @@ struct DashboardScreen: View {
         }
     }
 
-    // 四个大卡：处理器 / 内存 / 网络 / 进程（2×2）
+    // 上面四个大卡：处理器 / 内存 / 网络 / 显卡（2×2，等宽等高）
     private func bigMetricGrid(_ snapshot: Snapshot) -> some View {
         LazyVGrid(
             columns: [
@@ -232,18 +232,18 @@ struct DashboardScreen: View {
                 onTap: { detail = .network }
             )
             MetricTile(
-                title: "进程",
-                value: "\(snapshot.processCount)",
-                subtitle: "当前运行进程",
-                systemIcon: "list.bullet.rectangle",
-                color: Aurora.warning,
+                title: "显卡",
+                value: snapshot.gpuPercent.map { Fmt.percent($0) } ?? "—",
+                subtitle: snapshot.gpuName ?? "未检测到独显",
+                systemIcon: "display",
+                color: Aurora.rose,
                 sparkline: [],
-                onTap: { showProcesses = true }
+                onTap: { detail = .gpu }
             )
         }
     }
 
-    // 两个小卡：运行时间 / 显卡（同一行，等宽等高）
+    // 下面一行：运行时间 / 进程（等宽等高）
     private func smallMetricRow(_ snapshot: Snapshot) -> some View {
         HStack(alignment: .top, spacing: 10) {
             MetricTile(
@@ -253,18 +253,16 @@ struct DashboardScreen: View {
                 systemIcon: "clock",
                 color: Aurora.success,
                 sparkline: [],
-                compact: true,
                 onTap: { detail = .uptime }
             )
             MetricTile(
-                title: "显卡",
-                value: snapshot.gpuPercent.map { Fmt.percent($0) } ?? "—",
-                subtitle: snapshot.gpuName ?? "未检测到独显",
-                systemIcon: "display",
-                color: Aurora.rose,
+                title: "进程",
+                value: "\(snapshot.processCount)",
+                subtitle: "当前运行进程",
+                systemIcon: "list.bullet.rectangle",
+                color: Aurora.warning,
                 sparkline: [],
-                compact: true,
-                onTap: { detail = .gpu }
+                onTap: { showProcesses = true }
             )
         }
     }
@@ -453,18 +451,20 @@ private struct MetricRing: View {
 
 private struct MetricTile: View {
 
+    /// 六个卡片统一高度：行与行、列与列都对齐。
+    static let height: CGFloat = 128
+
     let title: String
     let value: String
     let subtitle: String
     let systemIcon: String
     let color: Color
     let sparkline: [Double]
-    var compact: Bool = false
     var onTap: (() -> Void)? = nil
 
     var body: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top, spacing: 6) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
@@ -483,6 +483,9 @@ private struct MetricTile: View {
                         .frame(width: 28, height: 28)
                         .background(RoundedRectangle(cornerRadius: 9).fill(color.tint(0.12)))
                 }
+
+                Spacer(minLength: 4)
+
                 HStack(alignment: .center, spacing: 4) {
                     Text(subtitle)
                         .font(AuroraFont.labelSmall)
@@ -496,14 +499,16 @@ private struct MetricTile: View {
                             .foregroundStyle(Aurora.muted.opacity(0.8))
                     }
                 }
-                if !compact && sparkline.count > 1 {
+
+                if sparkline.count > 1 {
                     Sparkline(values: sparkline, color: color)
-                        .frame(height: 22)
-                        .padding(.top, 1)
+                        .frame(height: 20)
+                        .padding(.top, 6)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .frame(height: MetricTile.height)
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onTapGesture { onTap?() }
     }
