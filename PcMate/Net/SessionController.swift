@@ -171,6 +171,13 @@ final class SessionController: ObservableObject {
         return false
     }
 
+    func power(_ action: PowerAction) async throws -> String {
+        guard let agent else {
+            throw PcMateError.message("电源操作需要 Agent 连接，SSH 模式暂不支持")
+        }
+        return try await agent.power(action)
+    }
+
     func netInfo() async throws -> NetInfoDetail {
         guard let agent else {
             throw PcMateError.message("网络详情需要 Agent 连接，SSH 模式暂不支持")

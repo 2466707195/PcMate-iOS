@@ -255,6 +255,11 @@ final class AgentClient: NSObject {
         return AgentParser.cleanup(data)
     }
 
+    func power(_ action: PowerAction) async throws -> String {
+        let data = try await request(action: "power", mode: action.rawValue, timeout: 15)
+        return data["message"] as? String ?? "\(action.title)指令已发送"
+    }
+
     func netInfo() async throws -> NetInfoDetail {
         let data = try await request(action: "netinfo", timeout: 30)
         return AgentParser.netInfo(data)

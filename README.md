@@ -1,6 +1,6 @@
 # PcMate iOS
 
-PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版、PcMate Agent 1.2.0 兼容（旧版 Agent 仍可连接，只是缺文件接口和详情面板）。
+PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版、PcMate Agent 1.3.0 兼容（旧版 Agent 仍可连接，只是缺文件接口、详情面板和电源菜单）。
 
 没有 Mac 也能构建：工程通过 XcodeGen 生成，在 GitHub Actions 或 Codemagic 的 macOS runner 上编译出**未签名 ipa**，再用「全能签 / ESign」重签安装到 iPhone。
 
@@ -33,6 +33,11 @@ PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版�
 - **清理**
   - Linux：页缓存 / 目录缓存 / 组合清理 / 深度整理。
   - Windows：工作集整理（EmptyWorkingSet）。
+- **电源菜单**（仪表盘右上角「⋯」）
+  - 锁定 / 睡眠 / 关机 / 重启；关机、重启需要二次确认。
+  - Windows 用 `tsdiscon`（服务运行在 session 0，直接 LockWorkStation 锁不到桌面）、`SetSuspendState`、`shutdown`。
+  - Linux 用 `logind` / `systemctl`。
+  - 关机后 Agent 会停止，需要在本机重新开机；重启后服务会自动恢复。
 - **安全存储**
   - 密码、私钥、Agent 令牌、证书/主机指纹保存在 iOS Keychain。
   - UserDefaults 只保存连接元数据。
@@ -44,7 +49,7 @@ PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版�
 | 项目 | 要求 |
 | --- | --- |
 | iPhone | iOS 16.4 或更高 |
-| 电脑端 | PcMate Agent 1.2.0（Windows / Linux），或开启 OpenSSH 服务 |
+| 电脑端 | PcMate Agent 1.3.0（Windows / Linux），或开启 OpenSSH 服务 |
 | 网络 | iPhone 与电脑在同一局域网 |
 | 构建 | macOS + Xcode 15.4（云端 runner 已满足） |
 | 构建工具 | XcodeGen **2.38.0**（脚本会自动安装固定版本） |

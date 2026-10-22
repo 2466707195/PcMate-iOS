@@ -227,6 +227,67 @@ enum CleanupMode: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - 电源操作（Agent 1.3.0 起）
+
+enum PowerAction: String, CaseIterable, Identifiable {
+    case lock = "LOCK"
+    case sleep = "SLEEP"
+    case shutdown = "SHUTDOWN"
+    case restart = "RESTART"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .lock: return "锁定"
+        case .sleep: return "睡眠"
+        case .shutdown: return "关机"
+        case .restart: return "重启"
+        }
+    }
+
+    var systemIcon: String {
+        switch self {
+        case .lock: return "lock"
+        case .sleep: return "moon.zzz"
+        case .shutdown: return "power"
+        case .restart: return "arrow.clockwise.circle"
+        }
+    }
+
+    /// 需要二次确认的操作（关机 / 重启）。
+    var isDestructive: Bool {
+        self == .shutdown || self == .restart
+    }
+
+    var confirmTitle: String {
+        switch self {
+        case .lock: return "锁定这台电脑？"
+        case .sleep: return "让电脑进入睡眠？"
+        case .shutdown: return "关闭这台电脑？"
+        case .restart: return "重启这台电脑？"
+        }
+    }
+
+    var confirmButton: String {
+        switch self {
+        case .lock: return "锁定"
+        case .sleep: return "睡眠"
+        case .shutdown: return "关机"
+        case .restart: return "重启"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .lock: return "电脑会回到登录界面，需要输入密码才能继续使用。"
+        case .sleep: return "电脑进入睡眠，网络会断开；需要在本机或键盘上唤醒。"
+        case .shutdown: return "关机后 Agent 会停止，手机将无法再连接，直到有人重新开机。"
+        case .restart: return "重启后 Agent 服务会自动恢复，稍等一两分钟即可重新连接。"
+        }
+    }
+}
+
 struct CleanupResult: Equatable {
     var success: Bool = false
     var beforeBytes: Int64 = 0

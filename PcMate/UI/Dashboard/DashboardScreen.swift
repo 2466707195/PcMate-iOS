@@ -11,6 +11,9 @@ struct DashboardScreen: View {
     @State private var showFiles = false
     @State private var showCleanup = false
     @State private var detail: DashboardDetail?
+    @State private var confirmPower: PowerAction?
+    @State private var powerNotice: String?
+    @State private var powerBusy = false
 
     init(connection: Connection, store: ConnectionStore) {
         self.connection = connection
@@ -54,6 +57,41 @@ struct DashboardScreen: View {
                                 Label("清理内存", systemImage: "sparkles")
                             }
                             .disabled(!model.isConnected)
+
+                            Divider()
+
+                            Section("电源") {
+                                Button {
+                                    confirmPower = .lock
+                                } label: {
+                                    Label("锁定", systemImage: "lock")
+                                }
+                                .disabled(!model.isConnected)
+
+                                Button {
+                                    confirmPower = .sleep
+                                } label: {
+                                    Label("睡眠", systemImage: "moon.zzz")
+                                }
+                                .disabled(!model.isConnected)
+
+                                Button {
+                                    confirmPower = .shutdown
+                                } label: {
+                                    Label("关机", systemImage: "power")
+                                }
+                                .disabled(!model.isConnected)
+
+                                Button {
+                                    confirmPower = .restart
+                                } label: {
+                                    Label("重启", systemImage: "arrow.clockwise.circle")
+                                }
+                                .disabled(!model.isConnected)
+                            }
+
+                            Divider()
+
                             Button(role: .destructive) {
                                 model.disconnect()
                                 dismiss()
@@ -146,8 +184,54 @@ struct DashboardScreen: View {
                 }
             }
         }
+        .confirmationDialog(
+            confirmPower?.confirmTitle ?? "电源操作",
+            isPresented: Binding(
+                get: { confirmPower != nil },
+                set: { if !$0 { confirmPower = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let action = confirmPower {
+                Button(action.confirmButton, role: action.isDestructive ? ButtonRole.destructive : nil) {
+                    let pending = action
+                    confirmPower = nil
+                    runPower(pending)
+                }
+            }
+            Button("取消", role: .cancel) { confirmPower = nil }
+        } message: {
+            Text(confirmPower?.detail ?? "")
+        }
+        .alert(
+            "电源操作",
+            isPresented: Binding(
+                get: { powerNotice != nil },
+                set: { if !$0 { powerNotice = nil } }
+            )
+        ) {
+            Button("好", role: .cancel) { powerNotice = nil }
+        } message: {
+            Text(powerNotice ?? "")
+        }
         .onAppear {
             Task { await model.start() }
+        }
+    }
+
+    private func runPower(_ action: PowerAction) {
+        guard !powerBusy else { return }
+        powerBusy = true
+        Task { @MainActor in
+            do {
+                powerNotice = try await model.session.power(action)
+            } catch {
+                powerNotice = "操作失败：\(error.localizedDescription)"
+            }
+            powerBusy = false
+            if action == .shutdown || action == .restart {
+                model.disconnect()
+            }
         }
     }
 
