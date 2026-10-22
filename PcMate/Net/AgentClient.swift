@@ -255,6 +255,21 @@ final class AgentClient: NSObject {
         return AgentParser.cleanup(data)
     }
 
+    func netInfo() async throws -> NetInfoDetail {
+        let data = try await request(action: "netinfo", timeout: 30)
+        return AgentParser.netInfo(data)
+    }
+
+    func gpuInfo() async throws -> [GpuDetail] {
+        let data = try await request(action: "gpuinfo", timeout: 30)
+        return AgentParser.gpuList(data)
+    }
+
+    func sysInfo() async throws -> RemoteSysInfo {
+        let data = try await request(action: "sysinfo", timeout: 20)
+        return AgentParser.sysInfo(data)
+    }
+
     private func failAll(_ error: Error) {
         if let continuation = welcomeContinuation {
             welcomeContinuation = nil
@@ -361,6 +376,9 @@ final class AgentClient: NSObject {
 
     private func fileError(status: Int, data: Data) -> Error {
         if status == 401 { return PcMateError.unauthorized }
+        if status == 404 {
+            return PcMateError.message("这台电脑上的 Agent 版本过低，没有文件传输接口（404）。请在电脑上把它升级到 PcMate Agent 1.2.0 后再试。")
+        }
         let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !text.isEmpty { return PcMateError.message(text) }
         return PcMateError.message("文件操作失败（HTTP \(status)）")
@@ -477,6 +495,72 @@ enum AgentParser {
             message: string(data["message"]),
             log: string(data["log"]),
             timeMs: int64(data["timeMs"]) ?? Int64(Date().timeIntervalSince1970 * 1000)
+        )
+    }
+
+    static func netInfo(_ data: [String: Any]) -> NetInfoDetail {
+        let wifiData = data["wifi"] as? [String: Any] ?? [:]
+        var wifi = WifiDetail()
+        wifi.available = wifiData["available"] as? Bool ?? false
+        wifi.ssid = string(wifiData["ssid"])
+        wifi.bssid = string(wifiData["bssid"])
+        wifi.signalPercent = int(wifiData["signalPercent"]) ?? 0
+        wifi.radio = string(wifiData["radio"])
+        wifi.band = string(wifiData["band"])
+        wifi.channel = string(wifiData["channel"])
+        wifi.rxRate = string(wifiData["rxRate"])
+        wifi.txRate = string(wifiData["txRate"])
+
+        return NetInfoDetail(
+            adapters: (data["adapters"] as? [[String: Any]] ?? []).map { item in
+                NetAdapterInfo(
+                    name: string(item["name"]),
+                    mac: string(item["mac"]),
+                    ipv4: item["ipv4"] as? [String] ?? [],
+                    ipv6: item["ipv6"] as? [String] ?? [],
+                    up: item["up"] as? Bool ?? false,
+                    mtu: int(item["mtu"]) ?? 0
+                )
+            },
+            wifi: wifi,
+            bluetooth: (data["bluetooth"] as? [[String: Any]] ?? []).map { item in
+                BluetoothDeviceInfo(
+                    name: string(item["name"]),
+                    address: string(item["address"]),
+                    connected: item["connected"] as? Bool ?? false,
+                    kind: string(item["kind"])
+                )
+            },
+            note: string(data["note"])
+        )
+    }
+
+    static func gpuList(_ data: [String: Any]) -> [GpuDetail] {
+        (data["items"] as? [[String: Any]] ?? []).map { item in
+            GpuDetail(
+                name: string(item["name"]),
+                vendor: string(item["vendor"]),
+                driver: string(item["driver"]),
+                memBytes: int64(item["memBytes"]) ?? 0,
+                status: string(item["status"])
+            )
+        }
+    }
+
+    static func sysInfo(_ data: [String: Any]) -> RemoteSysInfo {
+        RemoteSysInfo(
+            agentVersion: string(data["agentVersion"]),
+            protocolVersion: int(data["protocol"]) ?? 0,
+            platform: string(data["platform"]),
+            arch: string(data["arch"]),
+            uptimeSec: int64(data["uptimeSec"]) ?? 0,
+            bootTimeSec: int64(data["bootTimeSec"]) ?? 0,
+            hostname: string(data["hostname"]),
+            osLabel: string(data["osLabel"]),
+            kernel: string(data["kernel"]),
+            cpuModel: string(data["cpuModel"]),
+            cores: int(data["cores"]) ?? 0,
+            totalMemBytes: int64(data["totalMemBytes"]) ?? 0
         )
     }
 

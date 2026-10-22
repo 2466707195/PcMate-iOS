@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct DashboardScreen: View {
 
@@ -9,6 +10,7 @@ struct DashboardScreen: View {
     @State private var showProcesses = false
     @State private var showFiles = false
     @State private var showCleanup = false
+    @State private var detail: DashboardDetail?
 
     init(connection: Connection, store: ConnectionStore) {
         self.connection = connection
@@ -97,7 +99,8 @@ struct DashboardScreen: View {
 
                     if let snapshot = model.snapshot {
                         statusHero(snapshot)
-                        metricGrid(snapshot)
+                        bigMetricGrid(snapshot)
+                        smallMetricRow(snapshot)
                         diskCard(snapshot)
                         systemCard(snapshot)
                     } else if !model.connecting && model.errorMessage == nil {
@@ -134,6 +137,14 @@ struct DashboardScreen: View {
         }
         .sheet(isPresented: $showCleanup) {
             CleanupScreen(session: model.session, hostInfo: model.hostInfo)
+        }
+        .sheet(item: $detail) { kind in
+            DashboardDetailSheet(kind: kind, model: model) {
+                detail = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    showProcesses = true
+                }
+            }
         }
         .onAppear {
             Task { await model.start() }
@@ -184,7 +195,8 @@ struct DashboardScreen: View {
         }
     }
 
-    private func metricGrid(_ snapshot: Snapshot) -> some View {
+    // 四个大卡：处理器 / 内存 / 网络 / 进程（2×2）
+    private func bigMetricGrid(_ snapshot: Snapshot) -> some View {
         LazyVGrid(
             columns: [
                 GridItem(.flexible(), spacing: 10),
@@ -198,7 +210,8 @@ struct DashboardScreen: View {
                 subtitle: snapshot.cpuSpeedMhz.map { "\($0) MHz" } ?? "实时占用",
                 systemIcon: "cpu",
                 color: Aurora.brand,
-                sparkline: model.cpuHistory
+                sparkline: model.cpuHistory,
+                onTap: { detail = .cpu }
             )
             MetricTile(
                 title: "内存",
@@ -206,7 +219,8 @@ struct DashboardScreen: View {
                 subtitle: "\(Fmt.bytes(snapshot.memUsed)) / \(Fmt.bytes(snapshot.memTotal))",
                 systemIcon: "memorychip",
                 color: Aurora.teal,
-                sparkline: model.memHistory
+                sparkline: model.memHistory,
+                onTap: { detail = .memory }
             )
             MetricTile(
                 title: "网络",
@@ -214,7 +228,8 @@ struct DashboardScreen: View {
                 subtitle: "上传 \(Fmt.rate(snapshot.netTxBps))",
                 systemIcon: "arrow.down.circle",
                 color: Aurora.info,
-                sparkline: model.rxHistory
+                sparkline: model.rxHistory,
+                onTap: { detail = .network }
             )
             MetricTile(
                 title: "进程",
@@ -222,15 +237,24 @@ struct DashboardScreen: View {
                 subtitle: "当前运行进程",
                 systemIcon: "list.bullet.rectangle",
                 color: Aurora.warning,
-                sparkline: []
+                sparkline: [],
+                onTap: { showProcesses = true }
             )
+        }
+    }
+
+    // 两个小卡：运行时间 / 显卡（同一行，等宽等高）
+    private func smallMetricRow(_ snapshot: Snapshot) -> some View {
+        HStack(alignment: .top, spacing: 10) {
             MetricTile(
                 title: "运行时间",
                 value: Fmt.uptime(snapshot.uptimeSeconds),
                 subtitle: snapshot.loadAverage.map { "负载 \($0)" } ?? "系统已运行",
                 systemIcon: "clock",
                 color: Aurora.success,
-                sparkline: []
+                sparkline: [],
+                compact: true,
+                onTap: { detail = .uptime }
             )
             MetricTile(
                 title: "显卡",
@@ -238,7 +262,9 @@ struct DashboardScreen: View {
                 subtitle: snapshot.gpuName ?? "未检测到独显",
                 systemIcon: "display",
                 color: Aurora.rose,
-                sparkline: []
+                sparkline: [],
+                compact: true,
+                onTap: { detail = .gpu }
             )
         }
     }
@@ -433,6 +459,8 @@ private struct MetricTile: View {
     let systemIcon: String
     let color: Color
     let sparkline: [Double]
+    var compact: Bool = false
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         SectionCard {
@@ -455,18 +483,29 @@ private struct MetricTile: View {
                         .frame(width: 28, height: 28)
                         .background(RoundedRectangle(cornerRadius: 9).fill(color.tint(0.12)))
                 }
-                Text(subtitle)
-                    .font(AuroraFont.labelSmall)
-                    .foregroundStyle(Aurora.inkSoft)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                if sparkline.count > 1 {
+                HStack(alignment: .center, spacing: 4) {
+                    Text(subtitle)
+                        .font(AuroraFont.labelSmall)
+                        .foregroundStyle(Aurora.inkSoft)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    if onTap != nil {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Aurora.muted.opacity(0.8))
+                    }
+                }
+                if !compact && sparkline.count > 1 {
                     Sparkline(values: sparkline, color: color)
                         .frame(height: 22)
                         .padding(.top, 1)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .onTapGesture { onTap?() }
     }
 }
 

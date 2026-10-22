@@ -88,7 +88,7 @@ struct TonalButton: View {
     }
 }
 
-/// 主 CTA：品牌渐变底、白字。禁用时渐变换成 muted 实色。
+/// 主 CTA：品牌渐变底、白字。禁用时换成浅色底 + 灰字。
 ///
 /// 一个页面最多一个。
 struct GradientButton: View {
@@ -106,16 +106,16 @@ struct GradientButton: View {
                 systemIcon: systemIcon,
                 expands: expands
             )
-            .foregroundStyle(Color.white)
+            .foregroundStyle(enabled ? Color.white : Aurora.muted)
+            // 必须带 in: AuroraShape.button —— 只填颜色会变成直角矩形，
+            // 放在实白底栏里就是一块突兀的灰方块。
             .background(
-                enabled
-                    ? AnyShapeStyle(Aurora.brandGradient)
-                    : AnyShapeStyle(Aurora.muted)
+                enabled ? AnyShapeStyle(Aurora.brandGradient) : AnyShapeStyle(Aurora.surfaceVariant),
+                in: AuroraShape.button
             )
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.6)
     }
 }
 

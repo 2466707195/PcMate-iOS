@@ -164,6 +164,34 @@ final class SessionController: ObservableObject {
         throw PcMateError.connectionClosed
     }
 
+    // MARK: 详情（Agent 1.2.0+）
+
+    var supportsDetails: Bool {
+        if activeTransport == .agent { return true }
+        return false
+    }
+
+    func netInfo() async throws -> NetInfoDetail {
+        guard let agent else {
+            throw PcMateError.message("网络详情需要 Agent 连接，SSH 模式暂不支持")
+        }
+        return try await agent.netInfo()
+    }
+
+    func gpuInfo() async throws -> [GpuDetail] {
+        guard let agent else {
+            throw PcMateError.message("显卡详情需要 Agent 连接，SSH 模式暂不支持")
+        }
+        return try await agent.gpuInfo()
+    }
+
+    func sysInfo() async throws -> RemoteSysInfo {
+        guard let agent else {
+            throw PcMateError.message("系统详情需要 Agent 连接，SSH 模式暂不支持")
+        }
+        return try await agent.sysInfo()
+    }
+
     // MARK: 文件
 
     func list(path: String) async throws -> RemoteListing {

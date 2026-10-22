@@ -239,6 +239,71 @@ struct CleanupResult: Equatable {
     var freedBytes: Int64 { max(afterBytes - beforeBytes, 0) }
 }
 
+// MARK: - 网络 / 显卡 / 系统详情（Agent 1.2.0 起，按需拉取）
+
+struct NetAdapterInfo: Identifiable, Equatable {
+    var id: String { name + mac }
+    var name: String = ""
+    var mac: String = ""
+    var ipv4: [String] = []
+    var ipv6: [String] = []
+    var up: Bool = false
+    var mtu: Int = 0
+}
+
+struct WifiDetail: Equatable {
+    var available: Bool = false
+    var ssid: String = ""
+    var bssid: String = ""
+    var signalPercent: Int = 0
+    var radio: String = ""
+    var band: String = ""
+    var channel: String = ""
+    var rxRate: String = ""
+    var txRate: String = ""
+
+    var isConnected: Bool { available && !ssid.isEmpty }
+}
+
+struct BluetoothDeviceInfo: Identifiable, Equatable {
+    var id: String { name + address }
+    var name: String = ""
+    var address: String = ""
+    var connected: Bool = false
+    var kind: String = ""
+}
+
+struct NetInfoDetail: Equatable {
+    var adapters: [NetAdapterInfo] = []
+    var wifi: WifiDetail = WifiDetail()
+    var bluetooth: [BluetoothDeviceInfo] = []
+    var note: String = ""
+}
+
+struct GpuDetail: Identifiable, Equatable {
+    var id: String { name + driver }
+    var name: String = ""
+    var vendor: String = ""
+    var driver: String = ""
+    var memBytes: Int64 = 0
+    var status: String = ""
+}
+
+struct RemoteSysInfo: Equatable {
+    var agentVersion: String = ""
+    var protocolVersion: Int = 0
+    var platform: String = ""
+    var arch: String = ""
+    var uptimeSec: Int64 = 0
+    var bootTimeSec: Int64 = 0
+    var hostname: String = ""
+    var osLabel: String = ""
+    var kernel: String = ""
+    var cpuModel: String = ""
+    var cores: Int = 0
+    var totalMemBytes: Int64 = 0
+}
+
 // MARK: - 文件
 
 struct RemoteFileEntry: Identifiable, Equatable, Hashable {

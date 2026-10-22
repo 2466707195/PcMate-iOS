@@ -1,6 +1,6 @@
 # PcMate iOS
 
-PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版、PcMate Agent 1.1.0 兼容。
+PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版、PcMate Agent 1.2.0 兼容（旧版 Agent 仍可连接，只是缺文件接口和详情面板）。
 
 没有 Mac 也能构建：工程通过 XcodeGen 生成，在 GitHub Actions 或 Codemagic 的 macOS runner 上编译出**未签名 ipa**，再用「全能签 / ESign」重签安装到 iPhone。
 
@@ -16,7 +16,13 @@ PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版�
   - 首次连接采用 TOFU：记录服务器证书 SHA-256 指纹，后续指纹不一致会拒绝连接。
   - SSH 主机密钥同样按 SHA-256 指纹固定。
 - **仪表盘**
-  - CPU / 内存环形指标、网络速率、进程数、运行时间、显卡、磁盘占用。
+  - 顶部概要卡 + 四个大指标卡（处理器 / 内存 / 网络 / 进程）2×2 排列，下方是运行时间 / 显卡两个小卡。
+  - 每个卡片都能点开详情面板：
+    - 处理器：每个逻辑核心的实时占用条、频率、核心数，可跳到进程列表。
+    - 内存：已用/可用/缓存/提交/交换/分页池明细，可一键整理内存。
+    - 网络：上下行速率与累计流量、延迟、网卡列表、Wi-Fi（SSID/信号/频段/信道/速率）、蓝牙设备与连接状态。
+    - 显卡：占用率、显存、显卡列表（型号/厂商/驱动/状态）。
+    - 运行时间：开机时间、系统与连接信息，可一键重连。
   - Agent 模式实时推送；SSH 模式按设定间隔采样。
 - **进程管理**
   - 中文进程名与分组、图标、CPU / 内存排序、搜索、结束进程。
@@ -38,7 +44,7 @@ PcMate 的 iOS 原生客户端，使用 SwiftUI 编写，协议与 Android 版�
 | 项目 | 要求 |
 | --- | --- |
 | iPhone | iOS 16.4 或更高 |
-| 电脑端 | PcMate Agent 1.1.0（Windows / Linux），或开启 OpenSSH 服务 |
+| 电脑端 | PcMate Agent 1.2.0（Windows / Linux），或开启 OpenSSH 服务 |
 | 网络 | iPhone 与电脑在同一局域网 |
 | 构建 | macOS + Xcode 15.4（云端 runner 已满足） |
 | 构建工具 | XcodeGen **2.38.0**（脚本会自动安装固定版本） |
@@ -91,7 +97,7 @@ curl.exe -k https://127.0.0.1:8765/health
 应返回类似：
 
 ```json
-{"status":"ok","version":"1.1.0"}
+{"status":"ok","version":"1.2.0"}
 ```
 
 ### 2. 配对新设备
@@ -215,6 +221,23 @@ Agent 连接失败且已填写 SSH 信息时，会自动回退 SSH（可在连�
 ### 提示证书指纹不一致
 
 这是 TOFU 保护：服务器证书变了。确认是你自己重装/更换了 Agent 证书，然后删除连接重新配对；不要在不明网络环境下忽略此提示。
+
+### 文件页显示 “404 page not found”
+
+电脑上的 Agent 版本太旧（1.0.x 没有 `/files/*` 接口）。把电脑端 Agent 升级到 **1.2.0** 后再进文件页：
+
+```powershell
+# 管理员 PowerShell
+sc.exe stop PcMateAgent
+Copy-Item .\pcmate-agent-windows-amd64.exe "C:\Program Files\PcMate\pcmate-agent.exe" -Force
+sc.exe start PcMateAgent
+```
+
+升级不会更换令牌和证书，手机端不需要重新配对。可以用 `https://<电脑IP>:8765/health` 确认版本已变成 1.2.0。
+
+### 详情面板里网络 / 显卡显示“需要 Agent 1.2.0”
+
+同样是 Agent 版本问题：`netinfo`、`gpuinfo`、`sysinfo` 是 1.2.0 新增接口。旧版 Agent 仍可正常看仪表盘、进程、文件和清理。
 
 ### 文件下载后在哪里
 
