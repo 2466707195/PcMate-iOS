@@ -181,7 +181,7 @@ struct AuroraGlassPanel<Content: View>: View {
             content
                 .background(
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color.white)
+                        .fill(Aurora.surface)
                         .shadow(color: Aurora.barShadow, radius: 10, x: 0, y: 4)
                 )
                 .overlay(

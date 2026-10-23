@@ -100,7 +100,7 @@ struct PowerControlScreen: View {
             .padding(AuroraMetrics.cardPadding)
             .background(
                 AuroraShape.card
-                    .fill(Color.white)
+                    .fill(Aurora.surface)
                     .shadow(color: Aurora.cardShadow, radius: 4, x: 0, y: 1)
             )
             .overlay(

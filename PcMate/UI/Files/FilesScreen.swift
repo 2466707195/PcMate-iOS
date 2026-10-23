@@ -74,7 +74,7 @@ struct FilesScreen: View {
                     }
                 }
             } content: {
-                AuroraScrollView(bottomInset: 222) {
+                AuroraScrollView(bottomInset: 148) {
                     pathCard
 
                     if let action = model.actionMessage {
@@ -120,21 +120,42 @@ struct FilesScreen: View {
                         StatusPill(text: "\(model.entries.count) 项", color: Aurora.info)
                     }
                     Spacer().frame(height: 10)
-                    HStack(spacing: 8) {
-                        SmallTonalButton(text: "上一级", systemIcon: "arrow.up", enabled: model.canGoUp, expands: true) {
+                    HStack(spacing: 6) {
+                        SmallTonalButton(
+                            text: "上一级",
+                            systemIcon: "arrow.up",
+                            enabled: model.canGoUp,
+                            expands: true,
+                            height: 34
+                        ) {
                             Task { await model.goUp() }
                         }
-                        SmallTonalButton(text: "新建", systemIcon: "folder.badge.plus", enabled: model.canWrite, expands: true) {
+                        SmallTonalButton(
+                            text: "新建",
+                            systemIcon: "folder.badge.plus",
+                            enabled: model.canWrite,
+                            expands: true,
+                            height: 34
+                        ) {
                             newFolderName = ""
                             showNewFolder = true
                         }
-                    }
-                    Spacer().frame(height: 8)
-                    HStack(spacing: 8) {
-                        SmallTonalButton(text: "上传文件", systemIcon: "arrow.up.doc", enabled: model.canWrite, expands: true) {
+                        SmallTonalButton(
+                            text: "上传文件",
+                            systemIcon: "arrow.up.doc",
+                            enabled: model.canWrite,
+                            expands: true,
+                            height: 34
+                        ) {
                             showImporter = true
                         }
-                        SmallTonalButton(text: "上传图片", systemIcon: "photo.on.rectangle.angled", enabled: model.canWrite, expands: true) {
+                        SmallTonalButton(
+                            text: "上传图片",
+                            systemIcon: "photo.on.rectangle.angled",
+                            enabled: model.canWrite,
+                            expands: true,
+                            height: 34
+                        ) {
                             showPhotoPicker = true
                         }
                     }
@@ -352,6 +373,21 @@ struct FilesScreen: View {
                         }
                     }
                 }
+            }
+        } else {
+            // 既没在读取、又没有列表数据：不能什么都不画（那就是一片空白），给个能点的出口
+            SectionCard {
+                EmptyStateView(
+                    systemIcon: "wifi.exclamationmark",
+                    title: "没读到文件列表",
+                    message: "和电脑的连接可能刚断了一下，点下面重新读取。"
+                ) {
+                    TonalButton(text: "重新读取", systemIcon: "arrow.clockwise") {
+                        Task { await model.load(force: true) }
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                .padding(.vertical, 16)
             }
         }
     }

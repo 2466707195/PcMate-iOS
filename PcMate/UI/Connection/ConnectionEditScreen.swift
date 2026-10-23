@@ -176,7 +176,7 @@ struct ConnectionEditScreen: View {
                             .padding(.vertical, 9)
                             .background(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(selected ? Aurora.brandContainer : Color.white)
+                                    .fill(selected ? Aurora.brandContainer : Aurora.surface)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -359,7 +359,7 @@ struct ConnectionEditScreen: View {
                         .scrollContentBackground(.hidden)
                         .frame(minHeight: 112)
                         .padding(8)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Aurora.surface))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(Aurora.line, lineWidth: 1)

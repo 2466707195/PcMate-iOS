@@ -63,7 +63,7 @@ struct MenuField<Option: Hashable>: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 13)
                 .frame(maxWidth: .infinity)
-                .background(AuroraShape.control.fill(Color.white))
+                .background(AuroraShape.control.fill(Aurora.surface))
                 .overlay(
                     AuroraShape.control.stroke(Aurora.line, lineWidth: 1)
                 )
@@ -105,7 +105,7 @@ struct AuroraSegmented<Option: Hashable>: View {
             }
         }
         .padding(4)
-        .background(Capsule().fill(Color.white))
+        .background(Capsule().fill(Aurora.surface))
         .overlay(Capsule().stroke(Aurora.line.opacity(0.8), lineWidth: 1))
     }
 }

@@ -148,6 +148,8 @@ struct SmallTonalButton: View {
     var systemIcon: String? = nil
     var enabled: Bool = true
     var expands: Bool = false
+    /// 默认 38pt；一行塞四个的时候传 34，看上去更紧凑
+    var height: CGFloat = AuroraMetrics.smallButtonHeight
     let action: () -> Void
 
     var body: some View {
@@ -155,7 +157,7 @@ struct SmallTonalButton: View {
             AuroraButtonLabel(
                 text: text,
                 systemIcon: systemIcon,
-                height: AuroraMetrics.smallButtonHeight,
+                height: height,
                 font: AuroraFont.labelMedium,
                 expands: expands
             )

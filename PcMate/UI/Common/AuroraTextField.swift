@@ -51,7 +51,7 @@ struct AuroraTextField: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 13)
         .frame(maxWidth: .infinity)
-        .background(AuroraShape.control.fill(Color.white))
+        .background(AuroraShape.control.fill(Aurora.surface))
         .overlay(
             AuroraShape.control.stroke(isFocused ? Aurora.brand : Aurora.line, lineWidth: 1)
         )

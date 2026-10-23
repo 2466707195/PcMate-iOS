@@ -32,7 +32,10 @@ struct AuroraScrollView<Content: View>: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: AuroraMetrics.cardSpacing) {
+            // 这里**故意**不用 LazyVStack：
+            // 页面里条件插入卡片（上传进度、提示条）时，Lazy 版本会整块空白，
+            // 得手动滚动才重新出现。页面的子视图本来就不多，用 VStack 没有性能问题。
+            VStack(alignment: .leading, spacing: AuroraMetrics.cardSpacing) {
                 content()
             }
             .padding(.horizontal, AuroraMetrics.pagePadding)

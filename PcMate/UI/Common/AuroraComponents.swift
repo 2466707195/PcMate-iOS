@@ -10,8 +10,14 @@ import SwiftUI
 ///
 /// 规则：**背景可以淡，内容必须实**。色晕只存在于卡片之间的缝隙里。
 struct AuroraBackdrop: View {
+
+    /// 深色底上色晕需要更亮才看得出来
+    private var boost: Double { Aurora.isDark ? 1.8 : 1.0 }
+
     var body: some View {
         Canvas { context, size in
+            let strength = Aurora.glowStrength * boost
+
             context.fill(
                 Path(CGRect(origin: .zero, size: size)),
                 with: .color(Aurora.canvas)
@@ -19,21 +25,21 @@ struct AuroraBackdrop: View {
             drawGlow(
                 in: &context,
                 size: size,
-                color: Aurora.brand.opacity(0.11),
+                color: Aurora.glowA.opacity(0.11 * strength),
                 center: CGPoint(x: size.width * 0.16, y: size.height * 0.02),
                 radius: size.width * 0.85
             )
             drawGlow(
                 in: &context,
                 size: size,
-                color: Aurora.teal.opacity(0.08),
+                color: Aurora.glowB.opacity(0.08 * strength),
                 center: CGPoint(x: size.width * 1.04, y: size.height * 0.68),
                 radius: size.width * 0.80
             )
             drawGlow(
                 in: &context,
                 size: size,
-                color: Aurora.rose.opacity(0.05),
+                color: Aurora.glowC.opacity(0.05 * strength),
                 center: CGPoint(x: size.width * 0.02, y: size.height * 0.98),
                 radius: size.width * 0.70
             )
@@ -185,7 +191,7 @@ struct GlassBar<Content: View>: View {
             .padding(contentPadding)
             .background(
                 AuroraShape.bar
-                    .fill(Color.white)
+                    .fill(Aurora.surface)
                     .shadow(color: Aurora.barShadow, radius: 10, x: 0, y: 4)
             )
             .overlay(
@@ -210,7 +216,7 @@ struct SectionCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 AuroraShape.card
-                    .fill(Color.white)
+                    .fill(Aurora.surface)
                     .shadow(color: Aurora.cardShadow, radius: 4, x: 0, y: 1)
             )
             .overlay(

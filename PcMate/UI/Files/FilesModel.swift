@@ -89,8 +89,9 @@ final class FilesModel: ObservableObject {
         return result
     }
 
-    func load(path: String? = nil) async {
-        guard !loading else { return }
+    /// - Parameter force: 上传 / 删除之后强制刷新，即使上一次读取还没结束。
+    func load(path: String? = nil, force: Bool = false) async {
+        guard force || !loading else { return }
         let target: String
         if let path {
             target = path
@@ -135,7 +136,7 @@ final class FilesModel: ObservableObject {
             let target = RemotePath.join(currentPath, trimmed)
             _ = try await session.makeDirectory(path: target)
             flash("已创建「\(trimmed)」")
-            await load(path: currentPath)
+            await load(path: currentPath, force: true)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -188,7 +189,7 @@ final class FilesModel: ObservableObject {
         do {
             _ = try await session.upload(name: name, data: data, directory: currentPath)
             flash("已上传 \(name)")
-            await load(path: currentPath)
+            await load(path: currentPath, force: true)
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -200,7 +201,7 @@ final class FilesModel: ObservableObject {
         do {
             _ = try await session.delete(path: entry.path)
             flash("已删除 \(entry.name)")
-            await load(path: currentPath)
+            await load(path: currentPath, force: true)
         } catch {
             errorMessage = error.localizedDescription
         }

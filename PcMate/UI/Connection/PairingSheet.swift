@@ -98,7 +98,7 @@ struct PairingSheet: View {
                     .frame(maxWidth: .infinity)
                     .background(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(code.count == 6 ? Aurora.brandContainer : Color.white)
+                            .fill(code.count == 6 ? Aurora.brandContainer : Aurora.surface)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)

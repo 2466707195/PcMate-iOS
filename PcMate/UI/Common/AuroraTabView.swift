@@ -159,7 +159,7 @@ struct AuroraLegacyTabBar<Value: Hashable, Content: View>: View {
             .padding(.vertical, 6)
             .background(
                 AuroraShape.bar
-                    .fill(Color.white)
+                    .fill(Aurora.surface)
                     .shadow(color: Aurora.barShadow, radius: 10, x: 0, y: 4)
             )
             .overlay(AuroraShape.bar.stroke(Aurora.line.opacity(0.55), lineWidth: 1))
@@ -169,7 +169,6 @@ struct AuroraLegacyTabBar<Value: Hashable, Content: View>: View {
             .padding(.top, 10)
             .padding(.bottom, 8)
         }
-        .preferredColorScheme(.light)
     }
 }
 

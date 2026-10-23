@@ -10,6 +10,9 @@ struct SettingsScreen: View {
     @EnvironmentObject private var store: ConnectionStore
     @EnvironmentObject private var session: ComputerSession
 
+    @ObservedObject private var theme = ThemeStore.shared
+
+    @State private var showTheme = false
     @State private var showAdd = false
     @State private var editing: Connection?
     @State private var deleteTarget: Connection?
@@ -35,6 +38,7 @@ struct SettingsScreen: View {
                         AuroraBanner(systemIcon: "checkmark.circle.fill", text: cacheNotice, tone: Aurora.teal)
                     }
                     computersCard
+                    appearanceCard
                     printCard
                     systemCard
                     aboutCard
@@ -51,6 +55,9 @@ struct SettingsScreen: View {
         }
         .sheet(item: $editing) { connection in
             ConnectionEditScreen(connection: connection)
+        }
+        .fullScreenCover(isPresented: $showTheme) {
+            ThemeScreen()
         }
         .fullScreenCover(isPresented: $showPrinters) {
             PrintHomeScreen(onClose: { showPrinters = false })
@@ -147,6 +154,43 @@ struct SettingsScreen: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    // MARK: 外观
+
+    private var appearanceCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                AuroraSectionHeader(
+                    title: "外观",
+                    subtitle: "背景、图标与强调色",
+                    systemIcon: "paintpalette",
+                    tone: Aurora.brand,
+                    trailingText: theme.themeName
+                )
+
+                VStack(spacing: 0) {
+                    SettingsRow(
+                        systemIcon: "circle.lefthalf.filled",
+                        title: "界面主题",
+                        subtitle: theme.isDark ? "\(theme.themeName) · 深色底" : "\(theme.themeName) · 浅色底",
+                        tone: Aurora.brand
+                    ) {
+                        showTheme = true
+                    }
+
+                    Divider().overlay(Aurora.hairline)
+
+                    SettingsRow(
+                        systemIcon: "swatchpalette",
+                        title: "当前配色",
+                        subtitle: "主色、底色与光晕都在主题里调",
+                        tone: Aurora.teal,
+                        showsChevron: false
+                    )
+                }
+            }
+        }
     }
 
     // MARK: 打印
