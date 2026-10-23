@@ -3,40 +3,25 @@ import SwiftUI
 struct HomeScreen: View {
 
     @EnvironmentObject private var store: ConnectionStore
-    @State private var showAdd = false
-    @State private var editing: Connection?
-    @State private var deleteTarget: Connection?
+
+    /// 右上角电脑图标点开的「我的电脑」列表。
+    @State private var showComputers = false
+    /// 从列表里选「打开仪表盘」时用。
     @State private var presenting: Connection?
 
     var body: some View {
         NavigationStack {
             ZStack {
                 AuroraBackdrop()
+
                 AuroraScreen {
-                    AppTopBar(title: "PcMate", subtitle: "远程电脑 · 局域网打印") {
-                        AuroraIconButton(systemIcon: "plus") {
-                            showAdd = true
-                        }
-                    }
+                    // 顶部没有任何底色：一个透明的电脑图标贴在右上角
+                    TabHeaderBar { showComputers = true }
                 } content: {
                     AuroraScrollView(bottomInset: 118) {
                         hero
                         ComputerPickerCard()
-
-                        if store.connections.isEmpty {
-                            emptyState
-                        } else {
-                            AuroraSectionHeader(
-                                title: "我的电脑",
-                                subtitle: "点卡片进入仪表盘",
-                                systemIcon: "desktopcomputer",
-                                trailingText: "\(store.connections.count) 台"
-                            )
-
-                            ForEach(store.connections) { connection in
-                                connectionCard(connection)
-                            }
-                        }
+                        hint
                     }
                 } bar: {
                     EmptyView()
@@ -44,32 +29,16 @@ struct HomeScreen: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
+        .sheet(isPresented: $showComputers) {
+            ComputerListSheet { connection in
+                showComputers = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    presenting = connection
+                }
+            }
+        }
         .fullScreenCover(item: $presenting) { connection in
             DashboardScreen(connection: connection, store: store)
-        }
-        .sheet(isPresented: $showAdd) {
-            ConnectionEditScreen(connection: nil)
-                .environmentObject(store)
-        }
-        .sheet(item: $editing) { connection in
-            ConnectionEditScreen(connection: connection)
-                .environmentObject(store)
-        }
-        .confirmationDialog(
-            "删除这台电脑？",
-            isPresented: Binding(
-                get: { deleteTarget != nil },
-                set: { if !$0 { deleteTarget = nil } }
-            ),
-            presenting: deleteTarget
-        ) { target in
-            Button("删除", role: .destructive) {
-                store.delete(target)
-                deleteTarget = nil
-            }
-            Button("取消", role: .cancel) { deleteTarget = nil }
-        } message: { target in
-            Text("将删除「\(target.name)」的连接信息和 Keychain 中的凭据。")
         }
     }
 
@@ -120,82 +89,18 @@ struct HomeScreen: View {
         }
     }
 
-    // MARK: 空状态
+    // MARK: 右上角提示
 
-    private var emptyState: some View {
-        SectionCard {
-            EmptyStateView(
-                systemIcon: "desktopcomputer",
-                title: "还没有电脑",
-                message: "在电脑上安装并启动 PcMate Agent，\n然后用 6 位配对码连接。"
-            ) {
-                TonalButton(text: "开始配对", systemIcon: "link") {
-                    showAdd = true
-                }
-                .fixedSize(horizontal: true, vertical: false)
-            }
-            .padding(.vertical, 18)
+    private var hint: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Aurora.muted)
+            Text("连接历史在右上角的电脑图标里 · 共 \(store.connections.count) 台")
+                .font(AuroraFont.labelSmall)
+                .foregroundStyle(Aurora.muted)
+                .lineLimit(1)
         }
-        .padding(.top, 6)
-    }
-
-    // MARK: 连接卡片
-
-    private func connectionCard(_ connection: Connection) -> some View {
-        Button {
-            presenting = connection
-        } label: {
-            SectionCard {
-                HStack(spacing: 12) {
-                    Monogram(name: connection.name, tone: connection.transport == .agent ? Aurora.brand : Aurora.teal, size: 46)
-
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack(spacing: 7) {
-                            Text(connection.name)
-                                .font(AuroraFont.titleMedium)
-                                .foregroundStyle(Aurora.ink)
-                                .lineLimit(1)
-                            if connection.transport == .agent && connection.agentToken.isEmpty {
-                                StatusPill(text: "未配对", color: Aurora.warning)
-                                    .allowsHitTesting(false)
-                            }
-                        }
-                        Text(connection.address)
-                            .font(AuroraFont.bodySmall)
-                            .foregroundStyle(Aurora.inkSoft)
-                            .lineLimit(1)
-                        HStack(spacing: 7) {
-                            StatusPill(
-                                text: connection.transportLabel,
-                                color: connection.transport == .agent ? Aurora.brand : Aurora.teal
-                            )
-                            .allowsHitTesting(false)
-                            Text(Fmt.relative(connection.lastUsedAt))
-                                .font(AuroraFont.labelSmall)
-                                .foregroundStyle(Aurora.muted)
-                        }
-                    }
-
-                    Spacer(minLength: 4)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Aurora.muted)
-                }
-            }
-        }
-        .buttonStyle(PressScaleStyle())
-        .contextMenu {
-            Button {
-                editing = connection
-            } label: {
-                Label("编辑", systemImage: "pencil")
-            }
-            Button(role: .destructive) {
-                deleteTarget = connection
-            } label: {
-                Label("删除", systemImage: "trash")
-            }
-        }
+        .padding(.top, 2)
     }
 }

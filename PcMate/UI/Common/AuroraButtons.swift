@@ -19,8 +19,12 @@ struct AuroraButtonLabel: View {
 
     var body: some View {
         content
+            // 不撑满时给足左右留白，别让文字顶到胶囊边上（看上去像溢出）
+            .padding(.horizontal, expands ? 0 : 16)
             .frame(maxWidth: expands ? .infinity : nil)
             .frame(height: height)
+            // 关键：整块玻璃都可以点，而不是只有中间的文字
+            .contentShape(Rectangle())
     }
 
     private var content: some View {
@@ -35,6 +39,26 @@ struct AuroraButtonLabel: View {
                 .minimumScaleFactor(0.8)
         }
         .fixedSize(horizontal: !expands, vertical: false)
+    }
+}
+
+// MARK: - 统一玻璃底
+//
+// 所有按钮都是**无色透明玻璃**：不染任何品牌色，只留材质、白色高光边和一圈中性描边。
+// 层级靠文字颜色和字重区分（主 = 深品牌字，次 = 品牌字，危险 = 玫瑰字）。
+
+private extension View {
+
+    /// 主 / 次 / 危险按钮共用的玻璃底。
+    func auroraNeutralGlass(_ shape: some Shape, shadowRadius: CGFloat = 4) -> some View {
+        auroraGlassSurface(
+            shape,
+            tone: Aurora.inkSoft,
+            tint: 0,
+            border: 0.16,
+            shadowRadius: shadowRadius,
+            shadowY: shadowRadius > 0 ? 1 : 0
+        )
     }
 }
 
@@ -57,14 +81,7 @@ struct PrimaryButton: View {
                 expands: expands
             )
             .foregroundStyle(Aurora.brandDeep)
-            .auroraGlassSurface(
-                AuroraShape.button,
-                tone: Aurora.brand,
-                tint: 0.20,
-                border: 0.45,
-                shadowRadius: 4,
-                shadowY: 1
-            )
+            .auroraNeutralGlass(AuroraShape.button, shadowRadius: 5)
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)
@@ -72,7 +89,7 @@ struct PrimaryButton: View {
     }
 }
 
-/// 次按钮：浅玻璃 + 品牌字。
+/// 次按钮：同一块玻璃，品牌色字。
 struct TonalButton: View {
 
     let text: String
@@ -88,15 +105,8 @@ struct TonalButton: View {
                 systemIcon: systemIcon,
                 expands: expands
             )
-            .foregroundStyle(Aurora.brandDeep)
-            .auroraGlassSurface(
-                AuroraShape.button,
-                tone: Aurora.brand,
-                tint: 0.07,
-                border: 0.16,
-                shadowRadius: 3,
-                shadowY: 1
-            )
+            .foregroundStyle(Aurora.brand)
+            .auroraNeutralGlass(AuroraShape.button, shadowRadius: 3)
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)
@@ -123,14 +133,7 @@ struct GradientButton: View {
                 expands: expands
             )
             .foregroundStyle(Aurora.brandDeep)
-            .auroraGlassSurface(
-                AuroraShape.button,
-                tone: Aurora.brand,
-                tint: 0.28,
-                border: 0.55,
-                shadowRadius: 5,
-                shadowY: 2
-            )
+            .auroraNeutralGlass(AuroraShape.button, shadowRadius: 6)
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)
@@ -156,12 +159,9 @@ struct SmallTonalButton: View {
                 font: AuroraFont.labelMedium,
                 expands: expands
             )
-            .foregroundStyle(Aurora.brandDeep)
-            .auroraGlassSurface(
+            .foregroundStyle(Aurora.brand)
+            .auroraNeutralGlass(
                 RoundedRectangle(cornerRadius: 13, style: .continuous),
-                tone: Aurora.brand,
-                tint: 0.07,
-                border: 0.18,
                 shadowRadius: 0
             )
         }
@@ -187,15 +187,8 @@ struct DangerTonalButton: View {
                 systemIcon: systemIcon,
                 expands: expands
             )
-            .foregroundStyle(Aurora.onRoseContainer)
-            .auroraGlassSurface(
-                AuroraShape.button,
-                tone: Aurora.rose,
-                tint: 0.10,
-                border: 0.28,
-                shadowRadius: 3,
-                shadowY: 1
-            )
+            .foregroundStyle(Aurora.rose)
+            .auroraNeutralGlass(AuroraShape.button, shadowRadius: 3)
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)

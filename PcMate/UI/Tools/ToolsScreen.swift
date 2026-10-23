@@ -72,19 +72,15 @@ struct ToolsScreen: View {
     @EnvironmentObject private var session: ComputerSession
 
     @State private var route: ToolRoute?
+    @State private var showComputers = false
 
     var body: some View {
         ZStack {
             AuroraBackdrop()
 
             AuroraScreen {
-                AppTopBar(title: "工具栏", subtitle: statusSubtitle) {
-                    if session.isConnected {
-                        StatusPill(text: "在线", color: Aurora.teal)
-                    } else {
-                        StatusPill(text: session.connecting ? "连接中" : "离线", color: session.connecting ? Aurora.warning : Aurora.muted)
-                    }
-                }
+                // 顶部不画底色，只留右上角的透明电脑按钮
+                TabHeaderBar(caption: statusCaption) { showComputers = true }
             } content: {
                 AuroraScrollView(bottomInset: 118) {
                     toolGrid
@@ -93,6 +89,9 @@ struct ToolsScreen: View {
             } bar: {
                 EmptyView()
             }
+        }
+        .sheet(isPresented: $showComputers) {
+            ComputerListSheet()
         }
         .fullScreenCover(item: $route) { target in
             destination(for: target)
@@ -162,6 +161,7 @@ struct ToolsScreen: View {
             .overlay(
                 AuroraShape.card.stroke(Aurora.line.opacity(0.55), lineWidth: 1)
             )
+            .contentShape(AuroraShape.card)
         }
         .buttonStyle(PressScaleStyle())
     }
@@ -179,11 +179,11 @@ struct ToolsScreen: View {
         return session.isConnected
     }
 
-    private var statusSubtitle: String {
+    private var statusCaption: String {
         if session.isConnected { return session.displayName }
-        if session.connecting { return "正在连接…" }
+        if session.connecting { return "连接中…" }
         if let selected = session.selected { return "未连接 · \(selected.name)" }
-        return "先在首页选一台电脑"
+        return "未选电脑"
     }
 
     // MARK: 目标页面

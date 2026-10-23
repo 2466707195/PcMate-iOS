@@ -104,22 +104,62 @@ struct AppTopBar<Actions: View>: View {
 
             actions()
         }
-        .padding(.leading, onBack == nil ? 16 : 4)
-        .padding(.trailing, 10)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity)
-        // 顶栏也是浮层：半透明玻璃，透出背后的极光背景
-        .auroraGlassSurface(
-            AuroraShape.bar,
-            tone: Aurora.brand,
-            tint: 0.05,
-            border: 0.10,
-            shadowRadius: 8,
-            shadowY: 3
-        )
-        .padding(.horizontal, 12)
-        .padding(.top, 4)
-        .padding(.bottom, 2)
+        .padding(.leading, onBack == nil ? 20 : 4)
+        .padding(.trailing, 12)
+        .padding(.top, 6)
+        .padding(.bottom, 8)
+    }
+}
+
+// MARK: - 透明页头（首页 / 工具栏 / 设置）
+
+/// 三个主页面顶部只留一个**透明**的电脑按钮：
+/// 不画底、不画阴影 —— 页面上下滚动时顶部始终透光，也不会盖住内容。
+/// 点它打开「我的电脑」列表（连接历史）。
+struct TabHeaderBar: View {
+
+    var caption: String? = nil
+    var onComputers: () -> Void
+
+    @EnvironmentObject private var session: ComputerSession
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Spacer(minLength: 0)
+
+            if let caption, !caption.isEmpty {
+                Text(caption)
+                    .font(AuroraFont.labelSmall)
+                    .foregroundStyle(Aurora.muted)
+                    .lineLimit(1)
+            }
+
+            Button(action: onComputers) {
+                Image(systemName: "desktopcomputer")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Aurora.brandDeep)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
+                    .overlay(alignment: .topTrailing) {
+                        Circle()
+                            .fill(dotColor)
+                            .frame(width: 9, height: 9)
+                            .overlay(Circle().stroke(Color.white.opacity(0.9), lineWidth: 1.5))
+                            .padding(.top, 7)
+                            .padding(.trailing, 6)
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("我的电脑")
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 46)
+    }
+
+    private var dotColor: Color {
+        if session.isConnected { return Aurora.teal }
+        if session.connecting { return Aurora.warning }
+        return Aurora.outline
     }
 }
 
@@ -281,9 +321,9 @@ struct AuroraIconButton: View {
                 .frame(width: size, height: size)
                 .auroraGlassSurface(
                     Circle(),
-                    tone: tone,
-                    tint: 0.10,
-                    border: 0.20,
+                    tone: Aurora.inkSoft,
+                    tint: 0,
+                    border: 0.16,
                     shadowRadius: 0
                 )
                 .contentShape(Circle())

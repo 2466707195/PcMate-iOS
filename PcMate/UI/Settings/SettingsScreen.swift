@@ -16,6 +16,7 @@ struct SettingsScreen: View {
 
     @State private var showPrinters = false
     @State private var showPower = false
+    @State private var showComputers = false
 
     @State private var cache: AppCache.Report?
     @State private var cacheBusy = false
@@ -26,7 +27,8 @@ struct SettingsScreen: View {
             AuroraBackdrop()
 
             AuroraScreen {
-                AppTopBar(title: "设置", subtitle: "电脑 · 打印 · 系统")
+                // 和其他两页一致：顶部透明，只有右上角的电脑按钮
+                TabHeaderBar { showComputers = true }
             } content: {
                 AuroraScrollView(bottomInset: 118) {
                     if let cacheNotice {
@@ -43,6 +45,9 @@ struct SettingsScreen: View {
         }
         .sheet(isPresented: $showAdd) {
             ConnectionEditScreen(connection: nil)
+        }
+        .sheet(isPresented: $showComputers) {
+            ComputerListSheet()
         }
         .sheet(item: $editing) { connection in
             ConnectionEditScreen(connection: connection)

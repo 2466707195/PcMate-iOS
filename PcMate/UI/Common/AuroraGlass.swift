@@ -118,12 +118,11 @@ extension View {
         shadowY: CGFloat = 2
     ) -> some View {
         if #available(iOS 26.0, *) {
-            self.glassEffect(
-                Glass.regular
-                    .tint(tone.opacity(0.30))
-                    .interactive(),
-                in: shape
-            )
+            // tint = 0 时**完全不染色**，只留材质本身
+            let base: Glass = tint > 0
+                ? Glass.regular.tint(tone.opacity(min(tint * 2.4, 0.55)))
+                : Glass.regular
+            self.glassEffect(base.interactive(), in: shape)
         } else {
             self
                 // 先垫一层薄染色，再垫一层模糊材质：材质负责「透」，染色负责「语义」

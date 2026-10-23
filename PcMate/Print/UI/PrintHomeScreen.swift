@@ -317,9 +317,9 @@ struct PrintHomeScreen: View {
                 .padding(.vertical, 9)
                 .auroraGlassSurface(
                     Capsule(),
-                    tone: Aurora.brand,
-                    tint: 0.18,
-                    border: 0.35,
+                    tone: Aurora.inkSoft,
+                    tint: 0,
+                    border: 0.16,
                     shadowRadius: 8,
                     shadowY: 3
                 )

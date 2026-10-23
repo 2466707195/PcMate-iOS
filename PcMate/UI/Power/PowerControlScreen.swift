@@ -106,6 +106,7 @@ struct PowerControlScreen: View {
             .overlay(
                 AuroraShape.card.stroke(Aurora.line.opacity(0.55), lineWidth: 1)
             )
+            .contentShape(AuroraShape.card)
         }
         .buttonStyle(PressScaleStyle())
         .disabled(busy)
