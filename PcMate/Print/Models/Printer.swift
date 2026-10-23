@@ -104,7 +104,7 @@ enum PrintFormat: String, CaseIterable, Identifiable, Codable, Hashable {
         case .esc80:
             return "按 80mm 热敏小票机输出（576 点宽），内容自动缩放到纸宽。"
         case .bridge:
-            return "先把电脑上的桥接程序打开，再连接电脑 IP 的 9100 端口；可打印电脑上安装的任意打印机（包括 GDI 打印机）。"
+            return "连上电脑后会自动加入这台电脑的桥接打印机（走 PcMate Agent 的 9100 端口），可打印电脑上安装的任意打印机，包括 GDI 打印机。"
         }
     }
 

@@ -104,10 +104,22 @@ struct AppTopBar<Actions: View>: View {
 
             actions()
         }
-        .padding(.leading, onBack == nil ? 20 : 4)
+        .padding(.leading, onBack == nil ? 16 : 4)
         .padding(.trailing, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        // 顶栏也是浮层：半透明玻璃，透出背后的极光背景
+        .auroraGlassSurface(
+            AuroraShape.bar,
+            tone: Aurora.brand,
+            tint: 0.05,
+            border: 0.10,
+            shadowRadius: 8,
+            shadowY: 3
+        )
+        .padding(.horizontal, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 2)
     }
 }
 
@@ -252,7 +264,7 @@ struct AuroraBanner: View {
 
 // MARK: - 顶栏图标按钮
 
-/// 顶栏标准图标按钮：40pt 圆形浅色底，可关闭时自动降透明度。
+/// 顶栏标准图标按钮：圆形玻璃底，可关闭时自动降透明度。
 struct AuroraIconButton: View {
 
     let systemIcon: String
@@ -267,7 +279,13 @@ struct AuroraIconButton: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(tone)
                 .frame(width: size, height: size)
-                .background(Circle().fill(tone.tint(0.13)))
+                .auroraGlassSurface(
+                    Circle(),
+                    tone: tone,
+                    tint: 0.10,
+                    border: 0.20,
+                    shadowRadius: 0
+                )
                 .contentShape(Circle())
         }
         .buttonStyle(PressScaleStyle())

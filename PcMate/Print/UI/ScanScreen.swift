@@ -6,6 +6,7 @@ struct ScanScreen: View {
     let onManualAdd: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var printers: PrinterStore
     @StateObject private var scanner = LANScanner()
     @State private var prefix = ""
     @State private var started = false
@@ -173,7 +174,12 @@ struct ScanScreen: View {
     }
 
     private func resultRow(_ result: ScanResult) -> some View {
-        HStack(spacing: 12) {
+        // 电脑桥接跟着「连接电脑」自动加入，扫到就不需要再手动点一次。
+        let alreadyAdded = result.isBridge && printers.printers.contains {
+            $0.format == .bridge && $0.host == result.host
+        }
+
+        return HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(resultTone(result).tint(0.13))
                 .frame(width: 42, height: 42)
@@ -200,8 +206,17 @@ struct ScanScreen: View {
 
             Spacer(minLength: 4)
 
-            SmallTonalButton(text: "添加", expands: false) {
-                onPick(result)
+            if alreadyAdded {
+                Text("已添加")
+                    .font(AuroraFont.labelSmall)
+                    .foregroundStyle(Aurora.muted)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Aurora.hairline))
+            } else {
+                SmallTonalButton(text: "添加", expands: false) {
+                    onPick(result)
+                }
             }
         }
         .padding(.vertical, 8)

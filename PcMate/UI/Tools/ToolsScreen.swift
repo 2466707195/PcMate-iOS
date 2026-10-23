@@ -78,16 +78,15 @@ struct ToolsScreen: View {
             AuroraBackdrop()
 
             AuroraScreen {
-                AppTopBar(title: "工具栏", subtitle: session.isConnected ? session.displayName : "先选一台电脑") {
+                AppTopBar(title: "工具栏", subtitle: statusSubtitle) {
                     if session.isConnected {
                         StatusPill(text: "在线", color: Aurora.teal)
                     } else {
-                        StatusPill(text: "离线", color: Aurora.muted)
+                        StatusPill(text: session.connecting ? "连接中" : "离线", color: session.connecting ? Aurora.warning : Aurora.muted)
                     }
                 }
             } content: {
                 AuroraScrollView(bottomInset: 118) {
-                    ComputerPickerCard()
                     toolGrid
                     footnote
                 }
@@ -180,6 +179,13 @@ struct ToolsScreen: View {
         return session.isConnected
     }
 
+    private var statusSubtitle: String {
+        if session.isConnected { return session.displayName }
+        if session.connecting { return "正在连接…" }
+        if let selected = session.selected { return "未连接 · \(selected.name)" }
+        return "先在首页选一台电脑"
+    }
+
     // MARK: 目标页面
 
     @ViewBuilder
@@ -239,31 +245,76 @@ struct NeedsConnectionScreen: View {
 
     let tool: ToolRoute
 
+    @EnvironmentObject private var session: ComputerSession
     @Environment(\.dismiss) private var dismiss
+
+    @State private var busy = false
+    @State private var errorText: String?
+
+    private var hasTarget: Bool { session.selected != nil }
 
     var body: some View {
         ZStack {
             AuroraBackdrop()
             AuroraScreen {
-                AppTopBar(title: tool.title, subtitle: "需要先连接电脑", onBack: { dismiss() })
+                AppTopBar(
+                    title: tool.title,
+                    subtitle: hasTarget ? session.displayName : "需要先选择电脑",
+                    onBack: { dismiss() }
+                )
             } content: {
                 AuroraScrollView(bottomInset: 40) {
+                    if let errorText {
+                        AuroraBanner(
+                            systemIcon: "exclamationmark.triangle.fill",
+                            text: errorText,
+                            tone: Aurora.rose
+                        )
+                    }
                     SectionCard {
                         EmptyStateView(
                             systemIcon: "bolt.horizontal.circle",
-                            title: "还没有连接电脑",
-                            message: "回到工具栏，选一台电脑并点「连接电脑」，\n然后就能使用「\(tool.title)」了。"
+                            title: hasTarget ? "还没有连接电脑" : "还没有选择电脑",
+                            message: hasTarget
+                                ? "连上电脑后就能使用「\(tool.title)」，\n打印桥接会跟着一起就绪。"
+                                : "先去「首页」添加或选择一台电脑，\n再回到这里连接。"
                         ) {
-                            PrimaryButton(text: "知道了", systemIcon: "checkmark") {
-                                dismiss()
+                            if hasTarget {
+                                PrimaryButton(
+                                    text: busy ? "连接中…" : "连接电脑",
+                                    systemIcon: "bolt.horizontal.fill",
+                                    enabled: !busy
+                                ) {
+                                    connect()
+                                }
+                                .fixedSize(horizontal: true, vertical: false)
+                            } else {
+                                PrimaryButton(text: "知道了", systemIcon: "checkmark") {
+                                    dismiss()
+                                }
+                                .fixedSize(horizontal: true, vertical: false)
                             }
-                            .fixedSize(horizontal: true, vertical: false)
                         }
                         .padding(.vertical, 18)
                     }
                 }
             } bar: {
                 EmptyView()
+            }
+        }
+    }
+
+    private func connect() {
+        guard !busy else { return }
+        busy = true
+        errorText = nil
+        Task { @MainActor in
+            await session.connect()
+            busy = false
+            if session.isConnected {
+                dismiss()
+            } else {
+                errorText = session.errorText ?? "连接失败，请回首页检查电脑配置。"
             }
         }
     }

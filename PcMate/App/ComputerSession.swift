@@ -18,9 +18,11 @@ final class ComputerSession: ObservableObject {
     @Published private(set) var lastConnectedAt: Date?
 
     private let store: ConnectionStore
+    private let printers: PrinterStore
 
-    init(store: ConnectionStore) {
+    init(store: ConnectionStore, printers: PrinterStore) {
         self.store = store
+        self.printers = printers
     }
 
     var isConnected: Bool { controller?.isConnected == true }
@@ -67,11 +69,46 @@ final class ComputerSession: ObservableObject {
             _ = try await session.connect()
             controller = session
             lastConnectedAt = Date()
+            syncBridgePrinter(connection)
         } catch {
             session.close()
             errorText = error.localizedDescription
         }
         connecting = false
+    }
+
+    // MARK: - 打印桥接
+
+    /// 打印桥接**跟着电脑连接走**：连上电脑就自动把它的 9100 桥接端口
+    /// 加进「局域网打印」，不用再去扫描列表里单独添加一条「电脑桥接」。
+    ///
+    /// 同一个 IP 已经存在桥接打印机时只更新名字（电脑改名了也能同步过来），
+    /// 不会重复添加。
+    private func syncBridgePrinter(_ connection: Connection) {
+        let host = connection.host.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !host.isEmpty else { return }
+
+        let hostname = hostInfo?.hostname.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let base = hostname.isEmpty ? connection.name : hostname
+        let name = base.isEmpty ? "电脑桥接打印" : "\(base)（电脑桥接）"
+
+        if let existing = printers.printers.first(where: { $0.format == .bridge && $0.host == host }) {
+            guard existing.name != name else { return }
+            var updated = existing
+            updated.name = name
+            printers.update(updated)
+            return
+        }
+
+        var printer = PrinterConfig()
+        printer.name = name
+        printer.host = host
+        printer.port = 9100
+        printer.proto = .raw
+        printer.format = .bridge
+        printer.paper = .a4
+        printer.normalizeFormat()
+        printers.add(printer)
     }
 
     /// 一键重连：先断开再连。

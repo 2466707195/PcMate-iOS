@@ -38,7 +38,9 @@ struct AuroraButtonLabel: View {
     }
 }
 
-/// 主按钮：品牌色实心、白字。
+/// 主按钮：品牌色**玻璃**底 + 深品牌字。
+///
+/// 不再用实心填充 —— 整块玻璃透出底下的极光背景，靠染色强度和描边体现层级。
 struct PrimaryButton: View {
 
     let text: String
@@ -54,8 +56,15 @@ struct PrimaryButton: View {
                 systemIcon: systemIcon,
                 expands: expands
             )
-            .foregroundStyle(Color.white)
-            .background(AuroraShape.button.fill(Aurora.brand))
+            .foregroundStyle(Aurora.brandDeep)
+            .auroraGlassSurface(
+                AuroraShape.button,
+                tone: Aurora.brand,
+                tint: 0.20,
+                border: 0.45,
+                shadowRadius: 4,
+                shadowY: 1
+            )
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)
@@ -63,7 +72,7 @@ struct PrimaryButton: View {
     }
 }
 
-/// 次按钮：品牌浅底（primaryContainer）。
+/// 次按钮：浅玻璃 + 品牌字。
 struct TonalButton: View {
 
     let text: String
@@ -79,8 +88,15 @@ struct TonalButton: View {
                 systemIcon: systemIcon,
                 expands: expands
             )
-            .foregroundStyle(Aurora.onBrandContainer)
-            .background(AuroraShape.button.fill(Aurora.brandContainer))
+            .foregroundStyle(Aurora.brandDeep)
+            .auroraGlassSurface(
+                AuroraShape.button,
+                tone: Aurora.brand,
+                tint: 0.07,
+                border: 0.16,
+                shadowRadius: 3,
+                shadowY: 1
+            )
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)
@@ -88,7 +104,7 @@ struct TonalButton: View {
     }
 }
 
-/// 主 CTA：品牌渐变底、白字。禁用时渐变换成 muted 实色。
+/// 主 CTA：品牌**渐变玻璃**底。禁用时自动降透明度。
 ///
 /// 一个页面最多一个。
 struct GradientButton: View {
@@ -106,12 +122,14 @@ struct GradientButton: View {
                 systemIcon: systemIcon,
                 expands: expands
             )
-            .foregroundStyle(Color.white)
-            .background(
-                enabled
-                    ? AnyShapeStyle(Aurora.brandGradient)
-                    : AnyShapeStyle(Aurora.muted),
-                in: AuroraShape.button
+            .foregroundStyle(Aurora.brandDeep)
+            .auroraGlassSurface(
+                AuroraShape.button,
+                tone: Aurora.brand,
+                tint: 0.28,
+                border: 0.55,
+                shadowRadius: 5,
+                shadowY: 2
             )
         }
         .buttonStyle(PressScaleStyle())
@@ -120,7 +138,7 @@ struct GradientButton: View {
     }
 }
 
-/// 小按钮（38pt 高，13pt 圆角）。
+/// 小按钮（38pt 高，13pt 圆角），同样走玻璃。
 struct SmallTonalButton: View {
 
     let text: String
@@ -138,10 +156,13 @@ struct SmallTonalButton: View {
                 font: AuroraFont.labelMedium,
                 expands: expands
             )
-            .foregroundStyle(Aurora.onBrandContainer)
-            .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(Aurora.brandContainer)
+            .foregroundStyle(Aurora.brandDeep)
+            .auroraGlassSurface(
+                RoundedRectangle(cornerRadius: 13, style: .continuous),
+                tone: Aurora.brand,
+                tint: 0.07,
+                border: 0.18,
+                shadowRadius: 0
             )
         }
         .buttonStyle(PressScaleStyle())
@@ -150,7 +171,7 @@ struct SmallTonalButton: View {
     }
 }
 
-/// 危险操作按钮（玫瑰浅底）。
+/// 危险操作按钮（玫瑰色玻璃）。
 struct DangerTonalButton: View {
 
     let text: String
@@ -167,7 +188,14 @@ struct DangerTonalButton: View {
                 expands: expands
             )
             .foregroundStyle(Aurora.onRoseContainer)
-            .background(AuroraShape.button.fill(Aurora.roseContainer))
+            .auroraGlassSurface(
+                AuroraShape.button,
+                tone: Aurora.rose,
+                tint: 0.10,
+                border: 0.28,
+                shadowRadius: 3,
+                shadowY: 1
+            )
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!enabled)

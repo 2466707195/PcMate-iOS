@@ -38,6 +38,7 @@ struct PrintHomeScreen: View {
                     openEditorAfterScan(EditorMode.add(nil))
                 }
             )
+            .environmentObject(store)
         }
         .sheet(item: $editor) { mode in
             AddPrinterScreen(original: mode.original, isNew: !mode.isEdit) { saved in
@@ -135,7 +136,7 @@ struct PrintHomeScreen: View {
                     .font(AuroraFont.titleLarge)
                     .foregroundStyle(Aurora.ink)
 
-                Text("同一 Wi-Fi 下点「扫描」自动发现，\n或点「添加打印机」手动填写 IP。")
+                Text("连接电脑后会自动带上它的桥接打印机，\n也可以在同一 Wi-Fi 下点「扫描」发现网络打印机，\n或点「添加打印机」手动填写 IP。")
                     .font(AuroraFont.bodySmall)
                     .foregroundStyle(Aurora.inkSoft)
                     .multilineTextAlignment(.center)
@@ -154,6 +155,7 @@ struct PrintHomeScreen: View {
                 .padding(.bottom, 10)
 
             VStack(alignment: .leading, spacing: 9) {
+                PrintInfoRow(systemIcon: "desktopcomputer", text: "在 App 里连上电脑，这台电脑的「电脑桥接」打印机会自动出现在上面，不用单独添加。")
                 PrintInfoRow(systemIcon: "wifi", text: "手机和打印机要连在同一个 Wi-Fi / 局域网。")
                 PrintInfoRow(systemIcon: "number", text: "不知道 IP？用「扫描」自动发现，或在打印机面板打印网络配置页。")
                 PrintInfoRow(systemIcon: "hand.tap", text: "长按打印机卡片，可编辑、测试连接或删除。")
@@ -310,13 +312,16 @@ struct PrintHomeScreen: View {
         if let toast {
             Text(toast)
                 .font(AuroraFont.labelMedium)
-                .foregroundStyle(Aurora.onBrandContainer)
+                .foregroundStyle(Aurora.brandDeep)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .background(
-                    Capsule()
-                        .fill(Aurora.brandContainer)
-                        .shadow(color: Aurora.cardShadow, radius: 6, x: 0, y: 2)
+                .auroraGlassSurface(
+                    Capsule(),
+                    tone: Aurora.brand,
+                    tint: 0.18,
+                    border: 0.35,
+                    shadowRadius: 8,
+                    shadowY: 3
                 )
                 .padding(.top, 68)
                 .transition(.move(edge: .top).combined(with: .opacity))

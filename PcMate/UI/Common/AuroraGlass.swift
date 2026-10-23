@@ -91,6 +91,60 @@ extension View {
     }
 }
 
+// MARK: - 通用玻璃表面（按钮 / 顶栏 / 悬浮控件）
+
+extension View {
+
+    /// 通用玻璃底：**所有系统版本都是半透明**，能透出背后的极光背景。
+    ///
+    /// - iOS 26+：真正的 Liquid Glass（`glassEffect`）
+    /// - iOS 16–25：`.ultraThinMaterial` 模糊 + 语义色薄染 + 白色高光边 + 柔和投影
+    ///
+    /// 卡片**不要**用这个 —— 卡片必须实白，见 `SectionCard`。
+    ///
+    /// - Parameters:
+    ///   - shape: 外形（`AuroraShape.button` / `Capsule()` / `Circle()` …）
+    ///   - tone: 语义色。只用来表达含义（主操作 / 危险 / 成功），别做装饰
+    ///   - tint: 低版本染色强度，0 表示纯玻璃
+    ///   - border: 低版本描边强度
+    ///   - shadowRadius: 投影半径，0 表示不要投影（小按钮用 0）
+    @ViewBuilder
+    func auroraGlassSurface<S: Shape>(
+        _ shape: S,
+        tone: Color = Aurora.brand,
+        tint: Double = 0.12,
+        border: Double = 0.22,
+        shadowRadius: CGFloat = 6,
+        shadowY: CGFloat = 2
+    ) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(
+                Glass.regular
+                    .tint(tone.opacity(0.30))
+                    .interactive(),
+                in: shape
+            )
+        } else {
+            self
+                // 先垫一层薄染色，再垫一层模糊材质：材质负责「透」，染色负责「语义」
+                .background(shape.fill(tone.opacity(tint)))
+                .background {
+                    shape
+                        .fill(Material.ultraThinMaterial)
+                        .shadow(
+                            color: shadowRadius > 0 ? Aurora.barShadow : Color.clear,
+                            radius: shadowRadius,
+                            x: 0,
+                            y: shadowY
+                        )
+                }
+                // 玻璃感的关键：上沿高光 + 语义描边
+                .overlay(shape.stroke(Color.white.opacity(0.55), lineWidth: 1))
+                .overlay(shape.stroke(tone.opacity(border), lineWidth: 1))
+        }
+    }
+}
+
 // MARK: - 玻璃面板
 
 /// 浮动面板：iOS 26+ 用 Liquid Glass，低版本回退到 Aurora 的实白浮层。

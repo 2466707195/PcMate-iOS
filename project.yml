@@ -58,7 +58,7 @@ targets:
       properties:
         CFBundleDisplayName: PcMate
         CFBundleShortVersionString: "1.5.0"
-        CFBundleVersion: "8"
+        CFBundleVersion: "9"
         CFBundleDevelopmentRegion: zh-Hans
         UILaunchScreen:
           UIColorName: LaunchBackground
@@ -76,7 +76,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
         UIApplicationSupportsIndirectInputEvents: true
-        NSLocalNetworkUsageDescription: PcMate 需要访问局域网，以连接你电脑上的 PcMate Agent。
+        NSLocalNetworkUsageDescription: PcMate 需要访问局域网：连接你电脑上的 PcMate Agent，并发现和使用网络中的打印机。
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
           NSAllowsLocalNetworking: true
@@ -85,7 +85,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.aurora.pcmate.ios
         PRODUCT_NAME: PcMate
         MARKETING_VERSION: "1.5.0"
-        CURRENT_PROJECT_VERSION: "8"
+        CURRENT_PROJECT_VERSION: "9"
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
