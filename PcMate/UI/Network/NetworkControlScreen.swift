@@ -319,9 +319,67 @@ struct NetworkControlScreen: View {
                 : updated.note
         } catch {
             errorText = describe(error)
+            applying = false
             await load()
+            return
         }
+        // 改网卡会重建 IP 配置，承载 Agent 的这条 WebSocket 很可能被一起拆掉：
+        // 先把连接找回来，再把网卡的真实状态读回界面。
+        await syncAfterApply(enabled: enabled, adapter: adapter.name)
         applying = false
+    }
+
+    /// 应用之后的自愈同步：轮询读回真实状态，连接断了就自动重连。
+    private func syncAfterApply(enabled: Bool, adapter: String) async {
+        var matched = false
+        var latest: NetModeInfo?
+
+        for attempt in 0..<8 {
+            let delay: UInt64 = attempt == 0 ? 1_500_000_000 : 2_000_000_000
+            try? await Task.sleep(nanoseconds: delay)
+            if Task.isCancelled { return }
+
+            guard let value = await netModeAfterReconnect() else { continue }
+            info = value
+            latest = value
+            if let target = value.adapters.first(where: { $0.name == adapter }),
+               target.hasGateway == enabled {
+                matched = true
+                break
+            }
+        }
+
+        if matched {
+            notice = enabled
+                ? "已开启外网：「\(adapter)」恢复自动获取 IP（DHCP）。"
+                : "已关闭外网：「\(adapter)」改成手动 IP、默认网关已清空，局域网照旧。"
+            return
+        }
+
+        // 8 次都没对上：要么电脑还没配置完，要么没改成功，明说。
+        if let latest,
+           let target = latest.adapters.first(where: { $0.name == adapter }),
+           target.hasGateway != enabled {
+            errorText = enabled
+                ? "电脑那边「\(adapter)」还是没有网关，外网可能没开成功。稍后点右上角刷新确认。"
+                : "电脑那边「\(adapter)」还带着默认网关，外网可能没关成功。稍后点右上角刷新确认。"
+            return
+        }
+        notice = "指令已经发到电脑，网卡还在重新配置。稍等几秒点右上角刷新看看。"
+    }
+
+    /// 读网卡状态；连接被网卡重配置打断时自动重连一次。
+    private func netModeAfterReconnect() async -> NetModeInfo? {
+        do {
+            return try await session.netMode()
+        } catch {
+            do {
+                _ = try await session.connect()
+                return try await session.netMode()
+            } catch {
+                return nil
+            }
+        }
     }
 }
 
