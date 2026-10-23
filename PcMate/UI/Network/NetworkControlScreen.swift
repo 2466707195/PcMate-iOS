@@ -211,11 +211,46 @@ struct NetworkControlScreen: View {
 
     private var loadingCard: some View {
         SectionCard {
-            HStack(spacing: 10) {
-                ProgressView().controlSize(.small)
-                Text(loading ? "正在读取网卡状态…" : "暂无数据，点右上角刷新")
-                    .font(AuroraFont.bodySmall)
-                    .foregroundStyle(Aurora.inkSoft)
+            if loading {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("正在读取网卡状态…")
+                        .font(AuroraFont.bodySmall)
+                        .foregroundStyle(Aurora.inkSoft)
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 4)
+            } else if errorText != nil {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "wifi.exclamationmark")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Aurora.rose)
+                        Text("读不到电脑的网卡状态")
+                            .font(AuroraFont.titleSmall)
+                            .foregroundStyle(Aurora.ink)
+                    }
+                    Text("确认电脑上的 PcMate Agent 正在运行、并且是 1.5.0 或更高版本，然后重新读取一次。")
+                        .font(AuroraFont.bodySmall)
+                        .foregroundStyle(Aurora.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                    TonalButton(text: "重新读取", systemIcon: "arrow.clockwise") {
+                        Task { await load() }
+                    }
+                    .padding(.top, 2)
+                }
+                .padding(.vertical, 4)
+            } else {
+                HStack(spacing: 10) {
+                    Image(systemName: "network.slash")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Aurora.muted)
+                    Text("暂无数据，点右上角刷新")
+                        .font(AuroraFont.bodySmall)
+                        .foregroundStyle(Aurora.inkSoft)
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 4)
             }
         }
     }
@@ -240,9 +275,19 @@ struct NetworkControlScreen: View {
     }
 
     private var subtitle: String {
-        guard let info else { return "读取中…" }
+        guard let info else { return errorText == nil ? "读取中…" : "读取失败" }
         if !info.supported { return "当前电脑不支持" }
         return info.externalEnabled ? "外网已开启" : "外网已关闭"
+    }
+
+    /// 老版本 Agent 不认识 netmode 指令，翻译成「该升级了」，别把原始报错丢给用户。
+    private func describe(_ error: Error) -> String {
+        let raw = error.localizedDescription
+        let lower = raw.lowercased()
+        if lower.contains("netmode") && (raw.contains("未知操作") || lower.contains("unknown")) {
+            return "电脑上的 PcMate Agent 版本太旧，还不认识「外网开关」这条指令。把它升级到 1.5.0（桌面 PcMate-Agent-1.5.0 包，管理员运行 install），再点右上角刷新。"
+        }
+        return raw
     }
 
     private func load() async {
@@ -255,7 +300,7 @@ struct NetworkControlScreen: View {
                 selectedName = value.activeName
             }
         } catch {
-            errorText = error.localizedDescription
+            errorText = describe(error)
         }
         loading = false
     }
@@ -273,7 +318,7 @@ struct NetworkControlScreen: View {
                 ? (enabled ? "已开启外网访问。" : "已关闭外网访问。")
                 : updated.note
         } catch {
-            errorText = error.localizedDescription
+            errorText = describe(error)
             await load()
         }
         applying = false

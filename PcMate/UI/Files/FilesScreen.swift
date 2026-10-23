@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import PhotosUI
 
 struct FilesScreen: View {
 
@@ -8,6 +9,8 @@ struct FilesScreen: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showImporter = false
+    @State private var showPhotoPicker = false
+    @State private var photoItems: [PhotosPickerItem] = []
     @State private var showNewFolder = false
     @State private var newFolderName = ""
     @State private var deleteTarget: RemoteFileEntry?
@@ -48,18 +51,30 @@ struct FilesScreen: View {
                                 Label("上传文件", systemImage: "arrow.up.doc")
                             }
                             .disabled(!model.canWrite)
+                            Button {
+                                showPhotoPicker = true
+                            } label: {
+                                Label("上传图片", systemImage: "photo.on.rectangle.angled")
+                            }
+                            .disabled(!model.canWrite)
                         } label: {
                             Image(systemName: "ellipsis")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(Aurora.inkSoft)
                                 .frame(width: 40, height: 40)
-                                .background(Circle().fill(Aurora.inkSoft.tint(0.13)))
+                                .auroraGlassSurface(
+                                    Circle(),
+                                    tone: Aurora.inkSoft,
+                                    tint: 0,
+                                    border: 0.16,
+                                    shadowRadius: 0
+                                )
                                 .contentShape(Circle())
                         }
                     }
                 }
             } content: {
-                AuroraScrollView(bottomInset: 186) {
+                AuroraScrollView(bottomInset: 222) {
                     pathCard
 
                     if let action = model.actionMessage {
@@ -113,8 +128,14 @@ struct FilesScreen: View {
                             newFolderName = ""
                             showNewFolder = true
                         }
-                        SmallTonalButton(text: "上传", systemIcon: "arrow.up.doc", enabled: model.canWrite, expands: true) {
+                    }
+                    Spacer().frame(height: 8)
+                    HStack(spacing: 8) {
+                        SmallTonalButton(text: "上传文件", systemIcon: "arrow.up.doc", enabled: model.canWrite, expands: true) {
                             showImporter = true
+                        }
+                        SmallTonalButton(text: "上传图片", systemIcon: "photo.on.rectangle.angled", enabled: model.canWrite, expands: true) {
+                            showPhotoPicker = true
                         }
                     }
                 }
@@ -141,6 +162,17 @@ struct FilesScreen: View {
             case .failure(let error):
                 model.errorMessage = error.localizedDescription
             }
+        }
+        .photosPicker(
+            isPresented: $showPhotoPicker,
+            selection: $photoItems,
+            maxSelectionCount: 20,
+            matching: .images
+        )
+        .onChange(of: photoItems) { items in
+            guard !items.isEmpty else { return }
+            photoItems = []
+            Task { await uploadPhotos(items) }
         }
         .alert("新建文件夹", isPresented: $showNewFolder) {
             TextField("文件夹名称", text: $newFolderName)
@@ -324,6 +356,54 @@ struct FilesScreen: View {
         }
     }
 
+    // MARK: - 相册上传
+
+    /// 相册里选的图：统一转成 JPEG（Windows 上直接能看），再按时间命名上传。
+    private func uploadPhotos(_ items: [PhotosPickerItem]) async {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let stamp = formatter.string(from: Date())
+
+        for (index, item) in items.enumerated() {
+            do {
+                guard let raw = try await item.loadTransferable(type: Data.self) else {
+                    model.errorMessage = "有一张图片读取失败，换一张试试。"
+                    continue
+                }
+
+                let payload: Data
+                let ext: String
+                if let image = UIImage(data: raw), let jpeg = Self.uprightJPEG(image) {
+                    payload = jpeg
+                    ext = "jpg"
+                } else {
+                    payload = raw
+                    ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
+                }
+
+                let name = items.count == 1
+                    ? "IMG_\(stamp).\(ext)"
+                    : "IMG_\(stamp)_\(index + 1).\(ext)"
+
+                _ = await model.upload(data: payload, name: name)
+            } catch {
+                model.errorMessage = "读取图片失败：\(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// 按实际朝向重绘一遍再压成 JPEG —— 否则部分相机的照片传到电脑上是横的。
+    private static func uprightJPEG(_ image: UIImage, quality: CGFloat = 0.92) -> Data? {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
+        let upright = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+        }
+        return upright.jpegData(compressionQuality: quality)
+    }
 }
 
 private struct FileRow: View {

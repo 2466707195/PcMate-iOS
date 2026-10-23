@@ -162,16 +162,30 @@ final class FilesModel: ObservableObject {
             errorMessage = "请先进入一个磁盘或文件夹。"
             return false
         }
-        uploading = true
-        errorMessage = nil
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
             if accessing { url.stopAccessingSecurityScopedResource() }
-            uploading = false
         }
         do {
             let data = try Data(contentsOf: url, options: .mappedIfSafe)
             let name = url.lastPathComponent.isEmpty ? "upload.bin" : url.lastPathComponent
+            return await upload(data: data, name: name)
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    /// 直接把内存里的数据传到当前目录（相册图片走这条路）。
+    func upload(data: Data, name: String) async -> Bool {
+        guard canWrite else {
+            errorMessage = "请先进入一个磁盘或文件夹。"
+            return false
+        }
+        uploading = true
+        errorMessage = nil
+        defer { uploading = false }
+        do {
             _ = try await session.upload(name: name, data: data, directory: currentPath)
             flash("已上传 \(name)")
             await load(path: currentPath)

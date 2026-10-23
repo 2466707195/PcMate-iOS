@@ -31,6 +31,11 @@ struct ComputerListSheet: View {
                             ForEach(store.connections) { connection in
                                 row(connection)
                             }
+
+                            TonalButton(text: "添加一台新电脑", systemIcon: "plus") {
+                                showAdd = true
+                            }
+                            .padding(.top, 2)
                         }
                     }
                     .padding(.horizontal, AuroraMetrics.pagePadding)
@@ -70,24 +75,41 @@ struct ComputerListSheet: View {
     // MARK: 页头
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(alignment: .center, spacing: 12) {
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .fill(Aurora.brand.tint(0.10))
+                .frame(width: 38, height: 38)
+                .overlay(
+                    Image(systemName: "desktopcomputer")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Aurora.brand)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text("我的电脑")
-                    .font(AuroraFont.headlineSmall)
+                    .font(AuroraFont.titleLarge)
                     .foregroundStyle(Aurora.ink)
-                Text("点一下就连接 · 长按可管理")
+                Text(headerSubtitle)
                     .font(AuroraFont.labelSmall)
                     .foregroundStyle(Aurora.muted)
+                    .lineLimit(1)
             }
 
             Spacer(minLength: 0)
 
-            AuroraIconButton(systemIcon: "plus") { showAdd = true }
-            AuroraIconButton(systemIcon: "xmark", tone: Aurora.inkSoft) { dismiss() }
+            AuroraIconButton(systemIcon: "xmark", tone: Aurora.inkSoft, size: 34) {
+                dismiss()
+            }
         }
-        .padding(.horizontal, AuroraMetrics.pagePadding + 2)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
+        .padding(.horizontal, AuroraMetrics.pagePadding)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+    }
+
+    private var headerSubtitle: String {
+        if session.isConnected { return "已连接 \(session.displayName) · 点一行切换" }
+        if store.connections.isEmpty { return "还没有添加过电脑" }
+        return "\(store.connections.count) 台 · 点一下就连接"
     }
 
     // MARK: 空状态
