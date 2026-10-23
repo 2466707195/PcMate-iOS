@@ -6,20 +6,23 @@ struct HomeScreen: View {
     @State private var showAdd = false
     @State private var editing: Connection?
     @State private var deleteTarget: Connection?
+    @State private var presenting: Connection?
 
     var body: some View {
         NavigationStack {
             ZStack {
                 AuroraBackdrop()
                 AuroraScreen {
-                    AppTopBar(title: "PcMate", subtitle: "把电脑装进口袋") {
+                    AppTopBar(title: "PcMate", subtitle: "远程电脑 · 局域网打印") {
                         AuroraIconButton(systemIcon: "plus") {
                             showAdd = true
                         }
                     }
                 } content: {
-                    AuroraScrollView(bottomInset: 172) {
+                    AuroraScrollView(bottomInset: 118) {
                         hero
+                        ComputerPickerCard()
+
                         if store.connections.isEmpty {
                             emptyState
                         } else {
@@ -29,7 +32,6 @@ struct HomeScreen: View {
                                 systemIcon: "desktopcomputer",
                                 trailingText: "\(store.connections.count) 台"
                             )
-                            .padding(.top, 6)
 
                             ForEach(store.connections) { connection in
                                 connectionCard(connection)
@@ -37,28 +39,13 @@ struct HomeScreen: View {
                         }
                     }
                 } bar: {
-                    GlassBar {
-                        HStack(spacing: 8) {
-                            Text(store.connections.isEmpty ? "还没有电脑" : "\(store.connections.count) 台电脑")
-                                .font(AuroraFont.bodySmall)
-                                .foregroundStyle(Aurora.inkSoft)
-                            Spacer(minLength: 0)
-                            StatusPill(text: "仅局域网", color: Aurora.teal)
-                        }
-                        Spacer().frame(height: 10)
-                        PrimaryButton(
-                            text: store.connections.isEmpty ? "添加第一台电脑" : "添加另一台电脑",
-                            systemIcon: "plus"
-                        ) {
-                            showAdd = true
-                        }
-                    }
+                    EmptyView()
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Connection.self) { connection in
-                DashboardScreen(connection: connection, store: store)
-            }
+        }
+        .fullScreenCover(item: $presenting) { connection in
+            DashboardScreen(connection: connection, store: store)
         }
         .sheet(isPresented: $showAdd) {
             ConnectionEditScreen(connection: nil)
@@ -106,7 +93,7 @@ struct HomeScreen: View {
                             .font(AuroraFont.headlineSmall)
                             .foregroundStyle(Aurora.ink)
                             .tracking(-0.4)
-                        Text("实时状态 · 进程管理 · 文件传输")
+                        Text("实时状态 · 进程文件 · 局域网打印 · 外网开关")
                             .font(AuroraFont.bodySmall)
                             .foregroundStyle(Aurora.inkSoft)
                             .fixedSize(horizontal: false, vertical: true)
@@ -155,7 +142,9 @@ struct HomeScreen: View {
     // MARK: 连接卡片
 
     private func connectionCard(_ connection: Connection) -> some View {
-        NavigationLink(value: connection) {
+        Button {
+            presenting = connection
+        } label: {
             SectionCard {
                 HStack(spacing: 12) {
                     Monogram(name: connection.name, tone: connection.transport == .agent ? Aurora.brand : Aurora.teal, size: 46)

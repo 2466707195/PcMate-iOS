@@ -206,6 +206,24 @@ final class SessionController: ObservableObject {
         return try await agent.hardware()
     }
 
+    // MARK: 外网开关（Agent 1.5.0+）
+
+    /// 读取每张网卡的 DHCP / 网关状态，用来判断外网是否开启。
+    func netMode() async throws -> NetModeInfo {
+        guard let agent else {
+            throw PcMateError.message("外网开关需要 Agent 连接（Windows 电脑），SSH 模式暂不支持")
+        }
+        return try await agent.netMode()
+    }
+
+    /// 开启 / 关闭外网。开启 = DHCP，关闭 = 手动 IP 且网关留空。
+    func setExternal(_ enabled: Bool, adapter: String) async throws -> NetModeInfo {
+        guard let agent else {
+            throw PcMateError.message("外网开关需要 Agent 连接（Windows 电脑），SSH 模式暂不支持")
+        }
+        return try await agent.setExternal(enabled, adapter: adapter)
+    }
+
     // MARK: 文件
 
     func list(path: String) async throws -> RemoteListing {

@@ -182,7 +182,13 @@ final class AgentClient: NSObject {
 
     // MARK: 请求
 
-    func request(action: String, pid: Int? = nil, mode: String? = nil, timeout: TimeInterval = 20) async throws -> [String: Any] {
+    func request(
+        action: String,
+        pid: Int? = nil,
+        mode: String? = nil,
+        extra: [String: Any] = [:],
+        timeout: TimeInterval = 20
+    ) async throws -> [String: Any] {
         guard !closed else { throw PcMateError.connectionClosed }
         nextID += 1
         let id = nextID
@@ -193,6 +199,7 @@ final class AgentClient: NSObject {
         ]
         if let pid { payload["pid"] = pid }
         if let mode { payload["mode"] = mode }
+        for (key, value) in extra { payload[key] = value }
 
         return try await withCheckedThrowingContinuation { continuation in
             pending[id] = continuation
@@ -278,6 +285,23 @@ final class AgentClient: NSObject {
     func hardware() async throws -> HardwareSummary {
         let data = try await request(action: "hardware", timeout: 40)
         return AgentParser.hardware(data)
+    }
+
+    // MARK: 外网开关（Agent 1.5.0+）
+
+    func netMode() async throws -> NetModeInfo {
+        let data = try await request(action: "netmode", timeout: 25)
+        return AgentParser.netMode(data)
+    }
+
+    /// enabled=true 走 DHCP（开外网）；false 改成手动 IP 且清空网关（关外网）。
+    func setExternal(_ enabled: Bool, adapter: String) async throws -> NetModeInfo {
+        let data = try await request(
+            action: "netmode-set",
+            extra: ["enabled": enabled, "adapter": adapter],
+            timeout: 60
+        )
+        return AgentParser.netMode(data)
     }
 
     private func failAll(_ error: Error) {
@@ -630,6 +654,28 @@ enum AgentParser {
             },
             battery: battery
         )
+    }
+
+    static func netMode(_ data: [String: Any]) -> NetModeInfo {
+        var info = NetModeInfo()
+        info.externalEnabled = data["externalEnabled"] as? Bool ?? false
+        info.activeName = string(data["activeName"])
+        info.admin = data["admin"] as? Bool ?? false
+        info.supported = data["supported"] as? Bool ?? true
+        info.note = string(data["note"])
+        info.adapters = (data["adapters"] as? [[String: Any]] ?? []).map { item in
+            var adapter = NetModeAdapter()
+            adapter.name = string(item["name"])
+            adapter.dhcp = item["dhcp"] as? Bool ?? false
+            adapter.ipv4 = item["ipv4"] as? [String] ?? []
+            adapter.prefix = int(item["prefix"]) ?? 0
+            adapter.mask = string(item["mask"])
+            adapter.gateway = item["gateway"] as? [String] ?? []
+            adapter.hasGateway = item["hasGateway"] as? Bool ?? false
+            adapter.connected = item["connected"] as? Bool ?? false
+            return adapter
+        }
+        return info
     }
 
     static func listing(_ data: [String: Any]) -> RemoteListing {

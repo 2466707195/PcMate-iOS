@@ -57,8 +57,8 @@ targets:
       path: PcMate/Resources/Info.plist
       properties:
         CFBundleDisplayName: PcMate
-        CFBundleShortVersionString: "1.3.1"
-        CFBundleVersion: "7"
+        CFBundleShortVersionString: "1.5.0"
+        CFBundleVersion: "8"
         CFBundleDevelopmentRegion: zh-Hans
         UILaunchScreen:
           UIColorName: LaunchBackground
@@ -84,8 +84,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.aurora.pcmate.ios
         PRODUCT_NAME: PcMate
-        MARKETING_VERSION: "1.3.1"
-        CURRENT_PROJECT_VERSION: "7"
+        MARKETING_VERSION: "1.5.0"
+        CURRENT_PROJECT_VERSION: "8"
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
