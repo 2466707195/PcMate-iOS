@@ -17,6 +17,7 @@ final class AgentClient: NSObject {
     private var session: URLSession!
     private var socket: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
+    private var keepaliveTask: Task<Void, Never>?
 
     private var pending: [Int64: CheckedContinuation<[String: Any], Error>] = [:]
     private var nextID: Int64 = 0
@@ -91,12 +92,26 @@ final class AgentClient: NSObject {
 
         try? await send(["type": "subscribe", "intervalMs": intervalMs])
         _ = try? await ping()
+
+        // 保活：每 30 秒发一个 WebSocket ping。
+        // 电脑端的读超时是 75 秒，只靠它单方面发 ping 不够稳——
+        // 手机静置一会儿再点按钮，会报「软件导致连接中止」。
+        keepaliveTask?.cancel()
+        keepaliveTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                guard let self, !self.closed, let socket = self.socket else { return }
+                try? await socket.sendPing(pongTimeout: 10)
+            }
+        }
         return info
     }
 
     func close() {
         guard !closed else { return }
         closed = true
+        keepaliveTask?.cancel()
+        keepaliveTask = nil
         receiveTask?.cancel()
         receiveTask = nil
         socket?.cancel(with: .goingAway, reason: nil)
@@ -319,28 +334,102 @@ final class AgentClient: NSObject {
         return AgentParser.assistantReply(data)
     }
 
-    func assistantConfig() async throws -> AIConfigInfo {
-        let data = try await request(action: "assistant-config", timeout: 10)
+    // MARK: 服务商与模型管理
+
+    func aiConfig() async throws -> AIConfigInfo {
+        let data = try await request(action: "ai-config", timeout: 10)
         return AgentParser.aiConfig(data)
     }
 
-    /// 留空的字段表示不修改；apiKey 传 "-" 表示清空。
-    func saveAssistantConfig(baseUrl: String, model: String, apiKey: String) async throws -> AIConfigInfo {
-        var extra: [String: Any] = [:]
+    /// 保存 / 更新一个服务商。apiKey 留空表示不修改，"-" 表示清空。
+    @discardableResult
+    func saveAIProvider(
+        name: String,
+        baseUrl: String,
+        apiKey: String,
+        model: String = "",
+        setActive: Bool = false
+    ) async throws -> AIProviderInfo {
+        var extra: [String: Any] = ["name": name]
         if !baseUrl.isEmpty { extra["baseUrl"] = baseUrl }
-        if !model.isEmpty { extra["model"] = model }
         if !apiKey.isEmpty { extra["apiKey"] = apiKey }
-        let data = try await request(action: "assistant-config-set", extra: extra, timeout: 15)
+        if !model.isEmpty { extra["model"] = model }
+        if setActive { extra["setActive"] = true }
+        let data = try await request(action: "ai-provider-save", extra: extra, timeout: 15)
+        return AgentParser.aiProvider(data)
+    }
+
+    func deleteAIProvider(name: String) async throws {
+        _ = try await request(action: "ai-provider-delete", extra: ["name": name], timeout: 15)
+    }
+
+    @discardableResult
+    func selectAIProvider(name: String) async throws -> AIConfigInfo {
+        let data = try await request(action: "ai-provider-select", extra: ["name": name], timeout: 15)
         return AgentParser.aiConfig(data)
     }
 
-    func testAssistant() async throws -> AssistantTestResult {
-        let data = try await request(action: "assistant-test", timeout: 70)
-        return AssistantTestResult(
+    /// 设置某个服务商当前选用的模型（点常用模型行时用）。
+    @discardableResult
+    func setProviderModel(name: String, model: String) async throws -> AIConfigInfo {
+        let data = try await request(
+            action: "ai-provider-model",
+            extra: ["name": name, "model": model],
+            timeout: 15
+        )
+        return AgentParser.aiConfig(data)
+    }
+
+    /// 拉取模型列表。name 留空 = 当前服务商；也可以带 baseUrl + apiKey 试一家还没保存的。
+    func fetchAIModels(name: String = "", baseUrl: String = "", apiKey: String = "") async throws -> [AIModelInfo] {
+        var extra: [String: Any] = [:]
+        if !name.isEmpty { extra["name"] = name }
+        if !baseUrl.isEmpty { extra["baseUrl"] = baseUrl }
+        if !apiKey.isEmpty { extra["apiKey"] = apiKey }
+        let data = try await request(action: "ai-models", extra: extra, timeout: 40)
+        let rows = data["models"] as? [[String: Any]] ?? []
+        return rows.map { row in
+            AIModelInfo(
+                model: AgentParser.string(row["id"]),
+                ownedBy: AgentParser.string(row["owned"]),
+                favorite: row["favorite"] as? Bool ?? false
+            )
+        }
+    }
+
+    /// 测某个服务商 + 模型是否真的能用。
+    func testAIModel(name: String = "", model: String, baseUrl: String = "", apiKey: String = "") async throws -> AIModelTestResult {
+        var extra: [String: Any] = ["model": model]
+        if !name.isEmpty { extra["name"] = name }
+        if !baseUrl.isEmpty { extra["baseUrl"] = baseUrl }
+        if !apiKey.isEmpty { extra["apiKey"] = apiKey }
+        let data = try await request(action: "ai-model-test", extra: extra, timeout: 70)
+        return AIModelTestResult(
             reply: data["reply"] as? String ?? "",
-            model: data["model"] as? String ?? "",
+            model: data["model"] as? String ?? model,
+            provider: data["provider"] as? String ?? name,
             elapsedMs: AgentParser.int64(data["elapsedMs"]) ?? 0
         )
+    }
+
+    @discardableResult
+    func addAIFavorite(name: String, model: String) async throws -> AIConfigInfo {
+        let data = try await request(
+            action: "ai-favorite-add",
+            extra: ["name": name, "model": model],
+            timeout: 15
+        )
+        return AgentParser.aiConfig(data)
+    }
+
+    @discardableResult
+    func removeAIFavorite(name: String, model: String) async throws -> AIConfigInfo {
+        let data = try await request(
+            action: "ai-favorite-remove",
+            extra: ["name": name, "model": model],
+            timeout: 15
+        )
+        return AgentParser.aiConfig(data)
     }
 
     private func failAll(_ error: Error) {
@@ -712,12 +801,31 @@ enum AgentParser {
     }
 
     static func aiConfig(_ data: [String: Any]) -> AIConfigInfo {
-        AIConfigInfo(
+        let providers = (data["providers"] as? [[String: Any]] ?? []).map { aiProvider($0) }
+        let favorites = (data["favorites"] as? [[String: Any]] ?? []).map { row in
+            AIFavoriteInfo(
+                provider: string(row["provider"]),
+                model: string(row["model"]),
+                exists: row["exists"] as? Bool ?? true
+            )
+        }
+        return AIConfigInfo(
+            active: string(data["active"]),
+            providers: providers,
+            favorites: favorites,
+            maxSteps: int(data["maxSteps"]) ?? 6
+        )
+    }
+
+    static func aiProvider(_ data: [String: Any]) -> AIProviderInfo {
+        AIProviderInfo(
+            name: string(data["name"]),
             baseUrl: string(data["baseUrl"]),
             model: string(data["model"]),
             hasKey: data["hasKey"] as? Bool ?? false,
             keyHint: string(data["keyHint"]),
-            endpoint: string(data["endpoint"])
+            endpoint: string(data["endpoint"]),
+            active: data["active"] as? Bool ?? false
         )
     }
 

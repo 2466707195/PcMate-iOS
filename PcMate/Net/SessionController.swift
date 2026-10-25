@@ -234,25 +234,69 @@ final class SessionController: ObservableObject {
         return try await agent.assistant(text: text, history: history)
     }
 
-    func assistantConfig() async throws -> AIConfigInfo {
+    func aiConfig() async throws -> AIConfigInfo {
         guard let agent else {
             throw PcMateError.message("AI 助手设置需要 Agent 连接")
         }
-        return try await agent.assistantConfig()
+        return try await agent.aiConfig()
     }
 
-    func saveAssistantConfig(baseUrl: String, model: String, apiKey: String) async throws -> AIConfigInfo {
+    func saveAIProvider(name: String, baseUrl: String, apiKey: String, model: String, setActive: Bool) async throws -> AIProviderInfo {
         guard let agent else {
             throw PcMateError.message("AI 助手设置需要 Agent 连接")
         }
-        return try await agent.saveAssistantConfig(baseUrl: baseUrl, model: model, apiKey: apiKey)
+        return try await agent.saveAIProvider(
+            name: name, baseUrl: baseUrl, apiKey: apiKey, model: model, setActive: setActive
+        )
     }
 
-    func testAssistant() async throws -> AssistantTestResult {
+    func deleteAIProvider(name: String) async throws {
         guard let agent else {
             throw PcMateError.message("AI 助手设置需要 Agent 连接")
         }
-        return try await agent.testAssistant()
+        try await agent.deleteAIProvider(name: name)
+    }
+
+    func selectAIProvider(name: String) async throws -> AIConfigInfo {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.selectAIProvider(name: name)
+    }
+
+    func setProviderModel(name: String, model: String) async throws -> AIConfigInfo {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.setProviderModel(name: name, model: model)
+    }
+
+    func fetchAIModels(name: String, baseUrl: String, apiKey: String) async throws -> [AIModelInfo] {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.fetchAIModels(name: name, baseUrl: baseUrl, apiKey: apiKey)
+    }
+
+    func testAIModel(name: String, model: String, baseUrl: String, apiKey: String) async throws -> AIModelTestResult {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.testAIModel(name: name, model: model, baseUrl: baseUrl, apiKey: apiKey)
+    }
+
+    func addAIFavorite(name: String, model: String) async throws -> AIConfigInfo {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.addAIFavorite(name: name, model: model)
+    }
+
+    func removeAIFavorite(name: String, model: String) async throws -> AIConfigInfo {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.removeAIFavorite(name: name, model: model)
     }
 
     // MARK: 文件

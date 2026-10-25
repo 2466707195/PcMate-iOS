@@ -4,13 +4,14 @@ import SwiftUI
 
 /// 聊天页：问题 → 电脑上的 Agent 调模型 + 跑工具 → 回答。
 ///
-/// 手机上不做任何「智能」：这里只负责输入、气泡、工具执行记录和设置入口。
+/// 手机上不做任何「智能」：这里只负责输入、气泡和工具执行记录。
+/// 模型和密钥的配置在「设置 → AI 助手」。
 struct AssistantScreen: View {
 
     @EnvironmentObject private var session: ComputerSession
     @ObservedObject private var store = AssistantStore.shared
 
-    @State private var showSettings = false
+    @State private var config: AIConfigInfo?
     @State private var connecting = false
     @FocusState private var inputFocused: Bool
 
@@ -41,31 +42,42 @@ struct AssistantScreen: View {
                 }
             }
         }
-        .sheet(isPresented: $showSettings) {
-            AssistantSettingsSheet(controller: session.controller)
-        }
+        .task { await loadConfig() }
     }
 
     // MARK: 顶栏
 
     private var topBar: some View {
         AppTopBar(title: "AI 助手", subtitle: statusText) {
-            HStack(spacing: 0) {
-                AuroraIconButton(systemIcon: "trash", size: 34) {
-                    store.clear()
-                }
-                AuroraIconButton(systemIcon: "slider.horizontal.3", size: 34) {
-                    showSettings = true
-                }
+            AuroraIconButton(systemIcon: "trash", size: 34) {
+                store.clear()
             }
         }
     }
 
+    /// 顶栏副标题：连上之后显示「电脑名 · 服务商 / 模型」。
     private var statusText: String {
-        if session.isConnected { return "\(session.displayName) · 可调用工具操作电脑" }
-        if session.connecting { return "正在连接…" }
-        if let selected = session.selected { return "未连接 · \(selected.name)" }
-        return "还没有选择电脑"
+        guard session.isConnected else {
+            if session.connecting { return "正在连接…" }
+            if let selected = session.selected { return "未连接 · \(selected.name)" }
+            return "还没有选择电脑"
+        }
+        if let active = config?.activeProvider {
+            let model = active.model.isEmpty ? "还没选模型" : active.model
+            if active.hasKey {
+                return "\(session.displayName) · \(active.name) / \(model)"
+            }
+            return "\(session.displayName) · \(active.name) 还没填 Key"
+        }
+        return session.displayName
+    }
+
+    @MainActor
+    private func loadConfig() async {
+        guard session.isConnected else { return }
+        if let info = try? await session.controller?.aiConfig() {
+            config = info
+        }
     }
 
     // MARK: 对话
@@ -115,6 +127,18 @@ struct AssistantScreen: View {
                         .font(AuroraFont.bodySmall)
                         .foregroundStyle(Aurora.inkSoft)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(alignment: .top, spacing: 7) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Aurora.brand)
+                            .padding(.top, 2)
+                        Text("接口地址、密钥和常用模型在「设置 → AI 助手」里配，密钥只存在电脑上。")
+                            .font(AuroraFont.labelSmall)
+                            .foregroundStyle(Aurora.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 2)
                 }
             }
 

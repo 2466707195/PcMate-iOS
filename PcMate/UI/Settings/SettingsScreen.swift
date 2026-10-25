@@ -20,6 +20,7 @@ struct SettingsScreen: View {
     @State private var showPrinters = false
     @State private var showPower = false
     @State private var showComputers = false
+    @State private var showAI = false
 
     @State private var cache: AppCache.Report?
     @State private var cacheBusy = false
@@ -38,6 +39,7 @@ struct SettingsScreen: View {
                         AuroraBanner(systemIcon: "checkmark.circle.fill", text: cacheNotice, tone: Aurora.teal)
                     }
                     computersCard
+                    aiCard
                     appearanceCard
                     printCard
                     systemCard
@@ -46,6 +48,9 @@ struct SettingsScreen: View {
             } bar: {
                 EmptyView()
             }
+        }
+        .sheet(isPresented: $showAI) {
+            AIAssistantSettingsScreen(controller: session.controller)
         }
         .sheet(isPresented: $showAdd) {
             ConnectionEditScreen(connection: nil)
@@ -154,6 +159,37 @@ struct SettingsScreen: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    // MARK: AI 助手
+
+    private var aiCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                AuroraSectionHeader(
+                    title: "AI 助手",
+                    subtitle: "模型服务商、密钥、常用模型",
+                    systemIcon: "sparkles",
+                    tone: Aurora.brand
+                )
+
+                VStack(spacing: 0) {
+                    SettingsRow(
+                        systemIcon: "cpu",
+                        title: "模型与密钥",
+                        subtitle: session.isConnected ? "填接口地址和 Key，拉模型列表" : "需要先连接电脑",
+                        tone: Aurora.brand
+                    ) {
+                        showAI = true
+                    }
+                }
+
+                Text("在「助手」页用聊天的方式提问，由这台电脑调模型、跑工具（进程、清理、电源、外网、文件、命令）。密钥只保存在电脑上。")
+                    .font(AuroraFont.labelSmall)
+                    .foregroundStyle(Aurora.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
     // MARK: 外观

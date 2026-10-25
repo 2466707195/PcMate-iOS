@@ -3,6 +3,7 @@ import Foundation
 // MARK: - AI 助手的数据结构
 //
 // 模型调用和工具执行都在电脑端 Agent 上完成，这里只负责收发和展示。
+// Key 永远不下发到手机：只传「有没有配」和末 4 位。
 
 /// Agent 执行过的一次工具调用。
 struct AssistantStep: Identifiable, Hashable {
@@ -34,42 +35,71 @@ struct AssistantStep: Identifiable, Hashable {
         default: return tool
         }
     }
-
-    var icon: String {
-        switch tool {
-        case "list_processes", "kill_process": return "list.bullet.rectangle"
-        case "cleanup_memory": return "sparkles"
-        case "power_action": return "power"
-        case "set_external_network", "network_status", "network_adapters": return "wifi"
-        case "list_files", "read_file", "write_file", "make_directory", "delete_file": return "folder"
-        case "run_command": return "terminal"
-        case "hardware_info", "system_info": return "desktopcomputer"
-        default: return "wrench.and.screwdriver"
-        }
-    }
 }
 
-/// Agent 返回的一次完整回答。
-struct AssistantReply {
-    var reply: String
-    var steps: [AssistantStep]
-    var model: String
-    var elapsedMs: Int64
-}
+/// 一个模型服务商（OpenAI 兼容接口）。
+struct AIProviderInfo: Identifiable, Hashable {
+    var id: String { name }
 
-/// 大模型配置（手机端只能看到是否已配置，拿不到完整 Key）。
-struct AIConfigInfo {
+    var name: String
     var baseUrl: String
+    /// 这个服务商当前选用的模型
     var model: String
     var hasKey: Bool
     var keyHint: String
     var endpoint: String
+    var active: Bool
+
+    /// 列表副标题：地址 + 当前模型。
+    var subtitle: String {
+        var text = baseUrl.isEmpty ? "还没填接口地址" : baseUrl
+        if !model.isEmpty {
+            text += " · \(model)"
+        }
+        return text
+    }
+
+    var keyLabel: String {
+        hasKey ? "Key 已配置 \(keyHint)" : "还没填 Key"
+    }
 }
 
-/// 设置页「测试连接」的结果。
-struct AssistantTestResult {
+/// 一条常用模型记录。
+struct AIFavoriteInfo: Identifiable, Hashable {
+    var id: String { provider + "||" + model }
+
+    var provider: String
+    var model: String
+    /// 对应的服务商是否还存在（被删掉的行要能标出来）
+    var exists: Bool
+}
+
+/// 从服务商拉回来的一个模型。
+struct AIModelInfo: Identifiable, Hashable {
+    var id: String { model }
+
+    var model: String
+    var ownedBy: String
+    var favorite: Bool
+}
+
+/// 电脑上的完整 AI 配置。
+struct AIConfigInfo {
+    var active: String
+    var providers: [AIProviderInfo]
+    var favorites: [AIFavoriteInfo]
+    var maxSteps: Int
+
+    var activeProvider: AIProviderInfo? {
+        providers.first { $0.active } ?? providers.first { $0.name == active }
+    }
+}
+
+/// 模型测试结果。
+struct AIModelTestResult {
     var reply: String
     var model: String
+    var provider: String
     var elapsedMs: Int64
 }
 
