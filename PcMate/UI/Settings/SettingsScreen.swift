@@ -299,7 +299,15 @@ struct SettingsScreen: View {
                     SettingsRow(
                         systemIcon: "app.badge",
                         title: "PcMate",
-                        subtitle: "版本 1.5.0",
+                        subtitle: "版本 1.6.0",
+                        tone: Aurora.brand,
+                        showsChevron: false
+                    )
+                    Divider().overlay(Aurora.hairline)
+                    SettingsRow(
+                        systemIcon: "sparkles",
+                        title: "AI 助手",
+                        subtitle: "「助手」页需要 Agent 1.6.0 及以上",
                         tone: Aurora.brand,
                         showsChevron: false
                     )
@@ -307,7 +315,7 @@ struct SettingsScreen: View {
                     SettingsRow(
                         systemIcon: "server.rack",
                         title: "电脑端 Agent",
-                        subtitle: "桥接打印与外网开关需要 1.5.0 及以上",
+                        subtitle: "桥接打印、外网开关需要 1.5.0 及以上",
                         tone: Aurora.brand,
                         showsChevron: false
                     )
