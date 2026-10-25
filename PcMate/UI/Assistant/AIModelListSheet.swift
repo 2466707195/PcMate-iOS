@@ -92,11 +92,11 @@ struct AIModelListSheet: View {
                                     tone: Aurora.brand
                                 )
                                 VStack(spacing: 0) {
-                                    ForEach(Array(models.enumerated()), id: \.element.id) { index, item in
+                                    ForEach(models.indices, id: \.self) { index in
                                         if index > 0 {
                                             Divider().overlay(Aurora.hairline)
                                         }
-                                        row(item)
+                                        row(models[index])
                                     }
                                 }
                             }

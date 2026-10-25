@@ -201,10 +201,11 @@ struct AIAssistantSettingsScreen: View {
                     )
 
                     VStack(spacing: 0) {
-                        ForEach(Array(config.favorites.enumerated()), id: \.element.id) { index, favorite in
+                        ForEach(config.favorites.indices, id: \.self) { index in
                             if index > 0 {
                                 Divider().overlay(Aurora.hairline)
                             }
+                            let favorite = config.favorites[index]
                             favoriteRow(favorite, active: config.activeProvider?.name == favorite.provider
                                 && config.activeProvider?.model == favorite.model)
                         }
@@ -286,11 +287,11 @@ struct AIAssistantSettingsScreen: View {
 
                 if let config, !config.providers.isEmpty {
                     VStack(spacing: 0) {
-                        ForEach(Array(config.providers.enumerated()), id: \.element.id) { index, provider in
+                        ForEach(config.providers.indices, id: \.self) { index in
                             if index > 0 {
                                 Divider().overlay(Aurora.hairline)
                             }
-                            providerRow(provider)
+                            providerRow(config.providers[index])
                         }
                     }
                 } else {
@@ -559,6 +560,14 @@ struct AIModelSheetContext: Identifiable {
     var apiKey: String
 }
 
+/// 编辑页里的快速预设。
+private struct PresetItem: Identifiable {
+    let id = UUID()
+    var name: String
+    var url: String
+    var model: String
+}
+
 // MARK: - 服务商编辑
 
 struct AIProviderEditorSheet: View {
@@ -586,11 +595,11 @@ struct AIProviderEditorSheet: View {
 
     private enum Field { case name, url, key, model }
 
-    private let presets: [(name: String, url: String, model: String)] = [
-        ("DeepSeek", "https://api.deepseek.com", "deepseek-chat"),
-        ("通义千问", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
-        ("硅基流动", "https://api.siliconflow.cn/v1", "deepseek-ai/DeepSeek-V3"),
-        ("本机 Ollama", "http://127.0.0.1:11434/v1", "qwen2.5:7b")
+    private let presets: [PresetItem] = [
+        PresetItem(name: "DeepSeek", url: "https://api.deepseek.com", model: "deepseek-chat"),
+        PresetItem(name: "通义千问", url: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus"),
+        PresetItem(name: "硅基流动", url: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3"),
+        PresetItem(name: "本机 Ollama", url: "http://127.0.0.1:11434/v1", model: "qwen2.5:7b")
     ]
 
     var body: some View {
@@ -683,7 +692,7 @@ struct AIProviderEditorSheet: View {
                     columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
                     spacing: 8
                 ) {
-                    ForEach(presets, id: \.name) { preset in
+                    ForEach(presets) { preset in
                         Button {
                             if name.trimmed.isEmpty { name = preset.name }
                             baseUrl = preset.url
