@@ -101,7 +101,13 @@ final class AgentClient: NSObject {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 30_000_000_000)
                 guard let self, !self.closed, let socket = self.socket else { return }
-                try? await socket.sendPing(pongTimeout: 10)
+                // iOS 16 的 API 是 sendPing(pongReceiveHandler:)，没有 pongTimeout 这个参数
+                try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    socket.sendPing { error in
+                        if let error { continuation.resume(throwing: error) }
+                        else { continuation.resume(returning: ()) }
+                    }
+                }
             }
         }
         return info

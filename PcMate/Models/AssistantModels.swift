@@ -37,6 +37,14 @@ struct AssistantStep: Identifiable, Hashable {
     }
 }
 
+/// Agent 返回的一次完整回答。
+struct AssistantReply {
+    var reply: String
+    var steps: [AssistantStep]
+    var model: String
+    var elapsedMs: Int64
+}
+
 /// 一个模型服务商（OpenAI 兼容接口）。
 struct AIProviderInfo: Identifiable, Hashable {
     var id: String { name }

@@ -38,6 +38,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# 有些机器上配了系统代理（例如 127.0.0.1:7890 的 Clash），代理程序没开的时候
+# Invoke-WebRequest 会全部报「无法连接到远程服务器」。把 .NET 默认代理置空，
+# 只影响本进程，不动系统设置。
+[System.Net.WebRequest]::DefaultWebProxy = New-Object System.Net.WebProxy
 $ProgressPreference = "SilentlyContinue"
 
 if ([string]::IsNullOrWhiteSpace($Token)) {

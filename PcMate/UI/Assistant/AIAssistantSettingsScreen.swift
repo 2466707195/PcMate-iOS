@@ -86,11 +86,19 @@ struct AIAssistantSettingsScreen: View {
                 provider: editing,
                 onSaved: { Task { await reload() } },
                 onFetchModels: { providerName, url, key in
-                    modelSheet = AIModelSheetContext(
-                        providerName: providerName,
-                        baseUrl: url,
-                        apiKey: key
-                    )
+                    // 先把这家服务商存下来：模型列表里点某个模型时，
+                    // 要能直接把它设成当前模型，没保存过的服务商是设不动的。
+                    Task {
+                        _ = try? await controller?.saveAIProvider(
+                            name: providerName, baseUrl: url, apiKey: key, model: "", setActive: true
+                        )
+                        await reload()
+                        modelSheet = AIModelSheetContext(
+                            providerName: providerName,
+                            baseUrl: url,
+                            apiKey: key
+                        )
+                    }
                 }
             )
         }

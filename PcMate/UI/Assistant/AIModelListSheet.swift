@@ -220,7 +220,8 @@ struct AIModelListSheet: View {
             noticeIsError = false
             onChanged()
         } catch {
-            notice = friendly(error)
+            // 服务商还没保存成功（比如从编辑页刚跳过来）：说清楚下一步
+            notice = "「\(item.model)」选好了，但没能设成当前模型：\(friendly(error))\n回编辑页点一下「保存」再来选。"
             noticeIsError = true
         }
     }
