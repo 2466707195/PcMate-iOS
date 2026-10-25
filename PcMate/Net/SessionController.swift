@@ -224,6 +224,37 @@ final class SessionController: ObservableObject {
         return try await agent.setExternal(enabled, adapter: adapter)
     }
 
+    // MARK: AI 助手（Agent 1.6.0+）
+
+    /// 问 AI 助手。模型和工具都在电脑上跑，这里只等最终回答。
+    func assistant(text: String, history: [(role: String, content: String)]) async throws -> AssistantReply {
+        guard let agent else {
+            throw PcMateError.message("AI 助手需要 Agent 连接（电脑上要装 PcMate Agent 1.6.0 或更高版本）")
+        }
+        return try await agent.assistant(text: text, history: history)
+    }
+
+    func assistantConfig() async throws -> AIConfigInfo {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.assistantConfig()
+    }
+
+    func saveAssistantConfig(baseUrl: String, model: String, apiKey: String) async throws -> AIConfigInfo {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.saveAssistantConfig(baseUrl: baseUrl, model: model, apiKey: apiKey)
+    }
+
+    func testAssistant() async throws -> AssistantTestResult {
+        guard let agent else {
+            throw PcMateError.message("AI 助手设置需要 Agent 连接")
+        }
+        return try await agent.testAssistant()
+    }
+
     // MARK: 文件
 
     func list(path: String) async throws -> RemoteListing {

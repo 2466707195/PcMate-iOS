@@ -5,6 +5,7 @@ import SwiftUI
 enum AppTab: String, Hashable, CaseIterable, Identifiable {
     case home
     case tools
+    case assistant
     case settings
 
     var id: String { rawValue }
@@ -13,6 +14,7 @@ enum AppTab: String, Hashable, CaseIterable, Identifiable {
         switch self {
         case .home: return "首页"
         case .tools: return "工具栏"
+        case .assistant: return "助手"
         case .settings: return "设置"
         }
     }
@@ -21,6 +23,7 @@ enum AppTab: String, Hashable, CaseIterable, Identifiable {
         switch self {
         case .home: return "house"
         case .tools: return "square.grid.2x2"
+        case .assistant: return "bubble.left.and.bubble.right"
         case .settings: return "gearshape"
         }
     }
@@ -40,6 +43,7 @@ struct RootTabScreen: View {
         [
             AuroraTabSpec(id: .home, title: AppTab.home.title, icon: AppTab.home.icon),
             AuroraTabSpec(id: .tools, title: AppTab.tools.title, icon: AppTab.tools.icon),
+            AuroraTabSpec(id: .assistant, title: AppTab.assistant.title, icon: AppTab.assistant.icon),
             AuroraTabSpec(id: .settings, title: AppTab.settings.title, icon: AppTab.settings.icon)
         ]
     }
@@ -51,6 +55,8 @@ struct RootTabScreen: View {
                 HomeScreen()
             case .tools:
                 ToolsScreen()
+            case .assistant:
+                AssistantScreen()
             case .settings:
                 SettingsScreen()
             }

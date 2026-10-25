@@ -304,6 +304,45 @@ final class AgentClient: NSObject {
         return AgentParser.netMode(data)
     }
 
+    // MARK: AI 助手（Agent 1.6.0+）
+    //
+    // 模型调用和工具执行都在电脑上，手机只发问题、收结果。
+    // 超时给到 150 秒：一次提问里模型可能要连着调好几轮工具。
+
+    func assistant(text: String, history: [(role: String, content: String)]) async throws -> AssistantReply {
+        let turns = history.map { ["role": $0.role, "content": $0.content] }
+        let data = try await request(
+            action: "assistant",
+            extra: ["text": text, "history": turns],
+            timeout: 150
+        )
+        return AgentParser.assistantReply(data)
+    }
+
+    func assistantConfig() async throws -> AIConfigInfo {
+        let data = try await request(action: "assistant-config", timeout: 10)
+        return AgentParser.aiConfig(data)
+    }
+
+    /// 留空的字段表示不修改；apiKey 传 "-" 表示清空。
+    func saveAssistantConfig(baseUrl: String, model: String, apiKey: String) async throws -> AIConfigInfo {
+        var extra: [String: Any] = [:]
+        if !baseUrl.isEmpty { extra["baseUrl"] = baseUrl }
+        if !model.isEmpty { extra["model"] = model }
+        if !apiKey.isEmpty { extra["apiKey"] = apiKey }
+        let data = try await request(action: "assistant-config-set", extra: extra, timeout: 15)
+        return AgentParser.aiConfig(data)
+    }
+
+    func testAssistant() async throws -> AssistantTestResult {
+        let data = try await request(action: "assistant-test", timeout: 70)
+        return AssistantTestResult(
+            reply: data["reply"] as? String ?? "",
+            model: data["model"] as? String ?? "",
+            elapsedMs: AgentParser.int64(data["elapsedMs"]) ?? 0
+        )
+    }
+
     private func failAll(_ error: Error) {
         if let continuation = welcomeContinuation {
             welcomeContinuation = nil
@@ -653,6 +692,32 @@ enum AgentParser {
                 )
             },
             battery: battery
+        )
+    }
+
+    static func assistantReply(_ data: [String: Any]) -> AssistantReply {
+        AssistantReply(
+            reply: string(data["reply"]),
+            steps: (data["steps"] as? [[String: Any]] ?? []).map { item in
+                AssistantStep(
+                    tool: string(item["tool"]),
+                    args: string(item["args"]),
+                    ok: item["ok"] as? Bool ?? false,
+                    summary: string(item["summary"])
+                )
+            },
+            model: string(data["model"]),
+            elapsedMs: int64(data["elapsedMs"]) ?? 0
+        )
+    }
+
+    static func aiConfig(_ data: [String: Any]) -> AIConfigInfo {
+        AIConfigInfo(
+            baseUrl: string(data["baseUrl"]),
+            model: string(data["model"]),
+            hasKey: data["hasKey"] as? Bool ?? false,
+            keyHint: string(data["keyHint"]),
+            endpoint: string(data["endpoint"])
         )
     }
 
