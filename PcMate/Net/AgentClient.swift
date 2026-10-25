@@ -97,17 +97,11 @@ final class AgentClient: NSObject {
         // 电脑端的读超时是 75 秒，只靠它单方面发 ping 不够稳——
         // 手机静置一会儿再点按钮，会报「软件导致连接中止」。
         keepaliveTask?.cancel()
-        keepaliveTask = Task { [weak self] in
+        keepaliveTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 30_000_000_000)
-                guard let self, !self.closed, let socket = self.socket else { return }
-                // iOS 16 的 API 是 sendPing(pongReceiveHandler:)，没有 pongTimeout 这个参数
-                try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    socket.sendPing { error in
-                        if let error { continuation.resume(throwing: error) }
-                        else { continuation.resume(returning: ()) }
-                    }
-                }
+                guard let self, !self.closed else { return }
+                await self.sendKeepalivePing()
             }
         }
         return info
@@ -128,6 +122,14 @@ final class AgentClient: NSObject {
     }
 
     // MARK: WebSocket 收发
+
+    /// 保活 ping。iOS 的 API 是 `sendPing(pongReceiveHandler:)`，没有 pongTimeout。
+    private func sendKeepalivePing() async {
+        guard let socket else { return }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            socket.sendPing { _ in continuation.resume() }
+        }
+    }
 
     private func receiveLoop() async {
         while !Task.isCancelled {
