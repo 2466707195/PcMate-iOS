@@ -50,7 +50,7 @@ struct SettingsScreen: View {
             }
         }
         .sheet(isPresented: $showAI) {
-            AIAssistantSettingsScreen(controller: session.controller)
+            AIAssistantSettingsScreen(session: session)
         }
         .sheet(isPresented: $showAdd) {
             ConnectionEditScreen(connection: nil)

@@ -117,6 +117,16 @@ final class ComputerSession: ObservableObject {
         await connect()
     }
 
+    /// 回到前台时调用：连接还在就什么都不做；被后台挂掉了就自动重连。
+    ///
+    /// 只补「曾经连上过」的情况——用户主动断开（controller 已经是 nil）
+    /// 不会被打断，不会每次回前台都自动弹连接。
+    func ensureConnected() async {
+        guard controller != nil else { return }
+        if await controller?.isAlive() == true { return }
+        await reconnect()
+    }
+
     func disconnect() {
         controller?.close()
         controller = nil

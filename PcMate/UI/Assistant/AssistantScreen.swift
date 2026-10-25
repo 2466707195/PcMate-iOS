@@ -14,6 +14,7 @@ struct AssistantScreen: View {
     @State private var config: AIConfigInfo?
     @State private var connecting = false
     @FocusState private var inputFocused: Bool
+    @Environment(\.scenePhase) private var scenePhase
 
     private let bottomID = "assistant-bottom"
 
@@ -43,6 +44,14 @@ struct AssistantScreen: View {
             }
         }
         .task { await loadConfig() }
+        // 去别的 App 复制完 Key 回来：连接可能被系统挂掉，重连并刷新状态
+        .onChange(of: scenePhase) { phase in
+            guard phase == .active else { return }
+            Task {
+                await session.ensureConnected()
+                await loadConfig()
+            }
+        }
     }
 
     // MARK: 顶栏

@@ -8,7 +8,7 @@ import SwiftUI
 
 struct AIModelListSheet: View {
 
-    let controller: SessionController?
+    let session: ComputerSession
     let providerName: String
     let baseUrl: String
     let apiKey: String
@@ -26,6 +26,8 @@ struct AIModelListSheet: View {
     @State private var testingModel: String?
     @State private var testResult: String?
     @State private var workingModel: String?
+
+    private var controller: SessionController? { session.controller }
 
     var body: some View {
         ZStack {
@@ -62,6 +64,17 @@ struct AIModelListSheet: View {
                             )
                             PrimaryButton(text: "重试", systemIcon: "arrow.clockwise") {
                                 Task { await load() }
+                            }
+                            if !session.isConnected {
+                                TonalButton(
+                                    text: "重新连接电脑",
+                                    systemIcon: "bolt.horizontal.fill"
+                                ) {
+                                    Task {
+                                        await session.ensureConnected()
+                                        await load()
+                                    }
+                                }
                             }
                         }
                     } else if models.isEmpty {
@@ -194,6 +207,8 @@ struct AIModelListSheet: View {
         errorText = nil
         notice = nil
         noticeIsError = false
+        // 后台回来连接可能被挂掉：先探活重连，再拉列表
+        await session.ensureConnected()
         do {
             let rows = try await controller?.fetchAIModels(
                 name: providerName, baseUrl: baseUrl, apiKey: apiKey

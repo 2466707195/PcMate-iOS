@@ -13,12 +13,13 @@ import SwiftUI
 
 struct AIAssistantSettingsScreen: View {
 
-    let controller: SessionController?
+    let session: ComputerSession
 
     @Environment(\.dismiss) private var dismiss
 
     @State private var config: AIConfigInfo?
     @State private var loading = true
+    @State private var reconnecting = false
     @State private var notice: String?
     @State private var noticeIsError = false
     @State private var showEditor = false
@@ -26,6 +27,8 @@ struct AIAssistantSettingsScreen: View {
     @State private var modelSheet: AIModelSheetContext?
     @State private var testingFavorite: String?
     @State private var deleting: String?
+
+    private var controller: SessionController? { session.controller }
 
     var body: some View {
         ZStack {
@@ -50,6 +53,9 @@ struct AIAssistantSettingsScreen: View {
                             }
                         }
                     } else {
+                        if !session.isConnected {
+                            disconnectedCard
+                        }
                         if let notice {
                             VStack(alignment: .leading, spacing: 8) {
                                 AuroraBanner(
@@ -82,35 +88,66 @@ struct AIAssistantSettingsScreen: View {
         .task { await reload() }
         .sheet(isPresented: $showEditor) {
             AIProviderEditorSheet(
-                controller: controller,
+                controller: session.controller,
                 provider: editing,
                 onSaved: { Task { await reload() } },
                 onFetchModels: { providerName, url, key in
-                    // 先把这家服务商存下来：模型列表里点某个模型时，
-                    // 要能直接把它设成当前模型，没保存过的服务商是设不动的。
-                    Task {
-                        _ = try? await controller?.saveAIProvider(
-                            name: providerName, baseUrl: url, apiKey: key, model: "", setActive: true
-                        )
-                        await reload()
-                        modelSheet = AIModelSheetContext(
-                            providerName: providerName,
-                            baseUrl: url,
-                            apiKey: key
-                        )
-                    }
+                    modelSheet = AIModelSheetContext(
+                        providerName: providerName,
+                        baseUrl: url,
+                        apiKey: key
+                    )
                 }
             )
         }
         .sheet(item: $modelSheet) { context in
             AIModelListSheet(
-                controller: controller,
+                session: session,
                 providerName: context.providerName,
                 baseUrl: context.baseUrl,
                 apiKey: context.apiKey,
                 onChanged: { Task { await reload() } }
             )
         }
+    }
+
+    // MARK: 未连接
+
+    /// 连接断了（最常见：刚去别的 App 复制过 Key）时，给一个明确的重连入口，
+    /// 不然用户只会看到按钮点不动。
+    private var disconnectedCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                AuroraSectionHeader(
+                    title: "和电脑的连接断了",
+                    subtitle: "配置都存在电脑上，重连就好",
+                    systemIcon: "bolt.slash.fill",
+                    tone: Aurora.warning
+                )
+                Text("切到别的 App 复制地址或 Key 时，系统会把这条连接挂掉。点下面的按钮重连，已经填好的内容不会丢。")
+                    .font(AuroraFont.bodySmall)
+                    .foregroundStyle(Aurora.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+                PrimaryButton(
+                    text: reconnecting ? "重连中…" : "重新连接电脑",
+                    systemIcon: "arrow.clockwise",
+                    enabled: !reconnecting
+                ) {
+                    Task { await reconnectNow() }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func reconnectNow() async {
+        guard !reconnecting else { return }
+        reconnecting = true
+        notice = nil
+        noticeIsError = false
+        await session.ensureConnected()
+        reconnecting = false
+        await reload()
     }
 
     // MARK: 当前生效
@@ -443,8 +480,14 @@ struct AIAssistantSettingsScreen: View {
         loading = true
         notice = nil
         noticeIsError = false
+        // 后台回来连接可能已被挂掉：先探活，断了自动重连，再读配置
+        await session.ensureConnected()
         do {
             config = try await controller?.aiConfig()
+            if config == nil {
+                notice = "还没有连上电脑，读不到模型配置。连上之后再试。"
+                noticeIsError = true
+            }
         } catch {
             notice = friendly(error)
             noticeIsError = true
@@ -897,18 +940,40 @@ struct AIProviderEditorSheet: View {
             noticeIsError = true
             return
         }
+        let providerName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !providerName.isEmpty else {
+            notice = "先给这个服务商起个名字"
+            noticeIsError = true
+            return
+        }
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         if key.isEmpty && !hasKey {
             notice = "先填 API Key"
             noticeIsError = true
             return
         }
-        // 交给外层打开模型列表页，由它自己去拉
-        onFetchModels(
-            name.trimmingCharacters(in: .whitespacesAndNewlines),
-            url,
-            key
-        )
+
+        // 先把这家服务商存下来再拉列表：模型列表里点某个模型时，
+        // 要能直接把它设成当前模型，没保存过的服务商是设不动的。
+        // 保存失败就地把原因显示出来，不再静默无响应。
+        saving = true
+        notice = nil
+        noticeIsError = false
+        defer { saving = false }
+        do {
+            _ = try await controller?.saveAIProvider(
+                name: providerName,
+                baseUrl: url,
+                apiKey: key,
+                model: model.trimmingCharacters(in: .whitespacesAndNewlines),
+                setActive: true
+            )
+            onSaved()
+            onFetchModels(providerName, url, key)
+        } catch {
+            notice = friendly(error)
+            noticeIsError = true
+        }
     }
 
     private func friendly(_ error: Error) -> String {

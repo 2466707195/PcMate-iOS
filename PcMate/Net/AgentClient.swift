@@ -32,6 +32,16 @@ final class AgentClient: NSObject {
 
     var capturedFingerprint: String? { tlsDelegate.capturedFingerprint }
 
+    /// 这条 WebSocket 现在还能不能用。
+    ///
+    /// App 切到后台再回来时，iOS 会把 WebSocket 任务取消 / 挂起：
+    /// 这时候 send 不会立刻报错，而是永远卡住，表现为「按钮点不动」。
+    /// 所以发请求前先看一眼任务状态，不健康就直接当成断开。
+    var isSocketUsable: Bool {
+        guard !closed, let socket else { return false }
+        return socket.state == .running
+    }
+
     init(host: String, port: Int, token: String, tls: Bool, intervalMs: Int, fingerprint: String?) {
         self.host = host
         self.port = port
@@ -195,7 +205,8 @@ final class AgentClient: NSObject {
     }
 
     private func send(_ payload: [String: Any]) async throws {
-        guard let socket else { throw PcMateError.connectionClosed }
+        // 任务被取消 / 挂起时 send 会一直卡住，先挡掉
+        guard isSocketUsable, let socket else { throw PcMateError.connectionClosed }
         let data = try JSONSerialization.data(withJSONObject: payload)
         guard let text = String(data: data, encoding: .utf8) else {
             throw PcMateError.message("无法编码请求")
@@ -213,6 +224,9 @@ final class AgentClient: NSObject {
         timeout: TimeInterval = 20
     ) async throws -> [String: Any] {
         guard !closed else { throw PcMateError.connectionClosed }
+        // 后台回来时任务可能已被挂起：不健康就别发，直接报断开，
+        // 否则 send 会一直卡着，按钮看着像「点不动」。
+        guard isSocketUsable else { throw PcMateError.connectionClosed }
         nextID += 1
         let id = nextID
         var payload: [String: Any] = [

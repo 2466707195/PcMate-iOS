@@ -36,6 +36,19 @@ final class SessionController: ObservableObject {
         return "\(agent.lastLatencyMs) ms"
     }
 
+    /// 这条连接还在吗。切后台再回来时 WebSocket 会被系统挂掉，
+    /// 但客户端要等到下一次请求才发现——所以主动探一下。
+    func isAlive() async -> Bool {
+        guard isConnected, let agent else { return false }
+        if !agent.isSocketUsable { return false }
+        do {
+            _ = try await agent.ping()
+            return true
+        } catch {
+            return false
+        }
+    }
+
     var initialPath: String {
         ssh?.initialPath ?? ""
     }
